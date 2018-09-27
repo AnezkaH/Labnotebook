@@ -1,0 +1,2111 @@
+---
+title: "Maurice Wilkins Centre variants"
+author: "Anezka Hoskin"
+date: "`r format(Sys.Date())`"
+output:
+  html_document: default
+  word_document: default
+---
+
+#####Setting up datasets
+
+This cohort contains cases and controls from the Gout data base and cases from the Diabetes Mellitus (DM) and Renal Diabetes (RD) datasets.  Even if subjects in the DM and RD datasets do not have diabetes or gout they can not be considered controls because they are not healthy.  
+
+All genotypes and phenotypes were extracted from SNPmax.  
+The Gout genotypes and phenotypes were in the same phenogeno file.
+The DM and RD genotypes are in the same file but the phenotypes were seperate.  Seperate phenogeno files were extracted from SNPmax and then merged in Excel.  The RD rows were coppied into the DM file.  The alternative ID's of DM and RD were checked to delete duplicates in the same file and in the Gout file.  
+
+The genotypes for SLC22A3 rs8187715 variant were retrived from the CoreExome SNPmax.  There are 3635 subjects present from thr Gout study, 243 sujects from Diabetes Mellitus, 248 subjects from Renal Disease and 312 from Ngati Porou Hauora.  These genotypes were merged with the New Zealand wide cohort.  
+
+Once duplicates had been removed, the three dataset are merged together.  The Core Exome PCA file was then merged with the NZ wide cohort file for further analyses.  
+
+#####Polynesian Wide cohort
+
+This combines all polynesian cohorts, West, East and admixed.  
+
+#####East and West Polynesian cohorts
+
+These are subsets of the New Zealand wide cohort.  The subset is done using ethinicity class, a self-identfying ancestry measure.  The association analyses used PCA's to adjust. 
+
+#####Admixed Polynesian cohort
+
+This is a subset of the New Zealand wide cohort based on ethnicity class.  These individuals did not exclusivley identify as east or west polynesian. The association analyses used PCA's to adjust. 
+
+#####Ngati Porou Hauora cohort
+
+The genotypes and phenotypes were downloaded from SNPmax.  There are PCA values for half of the NPH cohort, in order to keep the cohort numbers analyses were adjusted with GPancestry rather than PCA.  
+
+```{r library&functions, echo=FALSE, message=F, warning=FALSE, esacpe = FALSE, results='asis'}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(plyr)
+library("pander")
+library(tidyverse)
+library(xtable)
+library(kableExtra)
+library(knitr) 
+library(dplyr)
+library(HardyWeinberg)
+library(broom)
+library(purrr)
+library(bReakingbad)
+library(meta)
+
+meansd= function(characteristic){ 
+  a <-round(mean(as.numeric(characteristic), na.rm=TRUE),2)
+  b <-round(sd(as.numeric(characteristic), na.rm=TRUE),2)
+  return(paste(a,"(", b,")", collapse = ""))
+}
+
+npercent=function(characteristic, name){
+  #characteristic is df$column and name is variable from that column in quote marks eg npercent(UKbiobank_goutSE_EURO$SEX,"1")
+  a<-table(characteristic)[name]
+  total<-sum(table(characteristic))  
+  percent <- (as.numeric(a)/as.numeric(total[1]))*100 
+  return(paste(as.numeric(a),"(",round(as.numeric(percent),2),")", collapse = ""))
+}
+
+hwepval=function(snpcol,gt1,gt2,gt3){
+  #snpcol = column with alleles coded as bases. gt1-3 are the genotypes 
+  #example = hwepval(mydata$ABCC5_RS369277426,"CC","CT","TT")
+  t <- HWExact(table(factor(snpcol, levels = c(gt1, gt2, gt3))), verbose = F)
+  p <- t[["pval"]]
+  return(paste(p))
+}
+
+#function to highlight significant p-values in tables
+format_p <- function(p){
+  ifelse(as.numeric(p)<0.05, cell_spec(p, "html", bold = T), cell_spec(p, "html",  bold = F))
+}
+
+#creating the function that will use the glm function to fill in the results table
+results= function(test, genotypes,s){
+  matrixoutput = matrix(nrow=1, ncol=7)
+  matrixoutput[1] <- test$df.null+1
+  matrixoutput[2] <- paste0(genotypes, collapse = "/")
+  matrixoutput[3] <- paste0(s,collapse = "/")
+  matrixoutput[4] <- sprintf(fmt = "%.3f", coefficients(test)[2]) #beta
+  matrixoutput[5] <- sprintf(fmt = "%.3f", coef(summary(test))[2,c(2)]) #SE
+  matrixoutput[6] <- sprintf(fmt = "%.3f", exp(coefficients(test))[2]) #OR
+  matrixoutput[7] <- sprintf(fmt = "%.3f", exp(confint(test))[2,c(1)]) #LCI
+  matrixoutput[8] <- sprintf(fmt = "%.3f", exp(confint(test))[2,c(2)]) #UCI
+  matrixoutput[9] <- sprintf(fmt = "%.3f", coef(summary(test))[2,c(4)]) #p value
+  return ((matrixoutput))
+}
+
+```
+
+#Variants of interest 
+
+NOTE: the following association tests measure the affect of the 'Alternative' allele on each phenotype
+
+```{r, echo=FALSE, message=F, warning=FALSE, esacpe = FALSE, results='asis'}
+
+#making lists that have column inforation in them 
+#Gene
+Col1 <- c("LIPE", "TSC1", "WFS1", "CREB3L2", "SLC22A3")
+#Gene Name
+Col2 <- c("Lipase E", "TSC complex subunit 1", "Wolframin ER transmembrane glycoprotein", "cAMP responsive element binding protein 3 like 2", "Solute Carrier Family 22 Member 3") 
+#Position
+Col3 <- c("42405466", "132905878", "6301612", "137915992", "1608647744")
+#Chromosome
+Col4 <- c("19", "9", "4", "7", "6")
+#ID
+Col5 <- c("rs370955937", "rs397514880", "rs756252214", "rs777894272", "rs8187715")
+#Reference Allele
+Col6 <- c("G", "G", "T", "A", "C") 
+#Alternative Allele
+Col7 <- c("A", "A", "G", "G", "T")
+#Consequence
+Col8 <- c("p.Arg821Cys", "p.Ala567Val", "p.Val606Gly", "p.Trp114Arg", "p.Thr44Met")
+#Annotation
+Col9 <- c("missense variant", "missense variant", "missense variant", "missense variant", "missense variant")
+
+Tab1 <- data.frame(Col1, Col2, Col3, Col4, Col5, Col6, Col7, Col8, Col9)
+cname <- c("Gene", "Gene Name", "Position", "Chromosome", "ID", "Reference Allele", "Alternative Allele ", "Consequence", "Annotation")
+colnames(Tab1) <- cname
+
+kable(Tab1, "html") %>% 
+  kable_styling("striped", full_width = F) %>%
+  row_spec(0:5, align = "center")
+
+
+```
+
+```{r NZW set up, echo=FALSE, message=F, warning=FALSE, esacpe = FALSE, results='asis'}
+
+#New Zealand Wide Cohort dataset set up 
+
+#uploading data file that contains genotypes of 4 SNPs and phenotype information from SNPmax
+#Gout phenogeno file
+mydataG<-read.delim("MW Variants Gout.txt", stringsAsFactors = F)
+#CREBRF rs373863828 genotypes 
+CREB_Goutgeno <- read.delim("CREB Gout.txt", stringsAsFactors = F)
+mydataG <- merge(mydataG, CREB_Goutgeno, by= "SUBJECT", all.x = T)
+#adding extra phenotype information for demographic table 
+newGpheno <- read.delim("Gout_pheno.txt", stringsAsFactors = F)
+#merge
+mydataG <- merge(mydataG, newGpheno, by = "SUBJECT", all.x = T)
+mydataG$PCAETHBROAD <- NULL
+mydataG$PCAETHSPECIFIC <- NULL
+
+#DM and RD phenogeno file
+DMRD <- read.delim("./DMandRD_filter.txt", stringsAsFactors = F)
+#CREBRF rs373863282 genotypes
+CREB_DMRDgeno <- read.delim("CREB DMRD.txt")
+DMRD<- merge(DMRD, CREB_DMRDgeno, by="SUBJECT", all.x = T)
+
+#adding extra phenotype information for demographic table 
+newDMpheno <- read.delim("DM_pheno.txt", stringsAsFactors = F)
+newRDpheno <- read.delim("RD_pheno.txt", stringsAsFactors = F)
+newDMRDpheno <- rbind(newDMpheno, newRDpheno, by = "SUBJECT")
+DMRD <- merge(DMRD, newDMRDpheno,by="SUBJECT", all.x = T)
+DMRD$WEIGHT <-  as.numeric(as.character(DMRD$WEIGHT))
+DMRD$HEIGHT <-  as.numeric(as.character(DMRD$HEIGHT))
+DMRD$WAIST <-  as.numeric(as.character(DMRD$WAIST))
+DMRD$URATE <-  as.numeric(as.character(DMRD$URATE))
+DMRD$CREAT <-  as.numeric(as.character(DMRD$CREAT))
+
+#merge DMRD with Gout 
+mydataNZ <- full_join(mydataG, DMRD, by.x = NULL)
+
+#CoreExome SLC22A3 rs8187751 genotypes 
+CoreExSLC <- read.delim("./CoreEx SLC.txt")
+Core_merge <- select(CoreExSLC, SUBJECT, RS8187715)
+mydataNZ <- merge(mydataNZ, Core_merge, by = "SUBJECT", all.x = T)
+
+#Removing blank, making them 'NA'
+mydataNZ[mydataNZ==""] = NA
+mydataNZ[mydataNZ==" "] = NA
+
+#upload the CoreExome data file that has the correct PCA data 
+PCA <- read.delim("../../CoreExomePCAdata.txt", stringsAsFactors = F)
+#making a new table that only contains the SUBJECT column and the URATE column 
+PCAmerge <- select(PCA, SUBJECT, PCA1, PCA2, PCA3, PCA4, PCA5, PCA6, PCA7, PCA8, PCA9, PCA10,PCAETHSPECIFIC, PCAETHBROAD)
+#merging the URATE column into mydata set (by the SUBJECT column)
+mydataNZ <- merge(mydataNZ, PCAmerge, by = "SUBJECT", all.x = T)
+
+#down coding the PCA ethnicities 
+mydataNZ$PCAETHBROAD_down <- mydataNZ$PCAETHBROAD
+mydataNZ$PCAETHBROAD_down <- mapvalues(mydataNZ$PCAETHBROAD_down, c("European", "African", "East or Southeast Asian", "East Polynesian", "West Polynesian", "Polynesian", "South Asian", "Hispanic", "Unspecified"), c("1","2","3","4","5","6","7","8","9"))
+mydataNZ$PCAETHBROAD_down <- as.numeric(as.character(mydataNZ$PCAETHBROAD_down))
+
+#replacing the 1 and 2 values for 0 and 1 in gout colunm to allow later function to work properly
+#Prior to down coding there were 82 patients = 3, Doesn't meet criteria for GPGOUT: gout diagnosis uncertain/unclear, very mild gout
+#After down coding, 1 = 0 (no Gout), 2 = 1 (Gout), 3 = NA 
+mydataNZ$GPGOUTAFFSTAT<-sub(3,NA, mydataNZ$GPGOUTAFFSTAT)
+mydataNZ$GPGOUTAFFSTAT<-sub(1,0, mydataNZ$GPGOUTAFFSTAT)
+mydataNZ$GPGOUTAFFSTAT<-sub(2,1, mydataNZ$GPGOUTAFFSTAT)
+mydataNZ<-mydataNZ[is.na(mydataNZ$GPGOUTAFFSTAT)==FALSE,]
+
+#down coding variants in order to calculate the minor allele frequency (MAF) and display in the table with the genotype frequencies 
+mydataNZ$RS370955937_down<-mydataNZ$RS370955937
+mydataNZ$RS370955937_down<-mapvalues(mydataNZ$RS370955937_down, c("GG", "GA", "AA" ), c("0", "1", "2"))
+mydataNZ$RS370955937_down<-as.numeric(as.character(mydataNZ$RS370955937_down))
+
+mydataNZ$RS397514880_down<-mydataNZ$RS397514880
+mydataNZ$RS397514880_down<-mapvalues(mydataNZ$RS397514880_down, c("GG", "GA", "AA" ), c("0", "1", "2"))
+mydataNZ$RS397514880_down<-as.numeric(as.character(mydataNZ$RS397514880_down))
+
+mydataNZ$RS756252214_down<-mydataNZ$RS756252214
+mydataNZ$RS756252214_down<-mapvalues(mydataNZ$RS756252214_down, c("TT", "TG", "GG" ), c("0", "1", "2"))
+mydataNZ$RS756252214_down<-as.numeric(as.character(mydataNZ$RS756252214_down))
+
+mydataNZ$RS777894272_down<-mydataNZ$RS777894272
+mydataNZ$RS777894272_down<-mapvalues(mydataNZ$RS777894272_down, c("AA", "AG", "GG" ), c("0", "1", "2"))
+mydataNZ$RS777894272_down<-as.numeric(as.character(mydataNZ$RS777894272_down))
+
+mydataNZ$RS8187715_down<-mydataNZ$RS8187715
+mydataNZ$RS8187715_down<-mapvalues(mydataNZ$RS8187715_down, c("CC", "TC", "TT" ), c("0", "1", "2"))
+mydataNZ$RS8187715_down<-as.numeric(as.character(mydataNZ$RS8187715_down))
+
+mydataNZ$RS373863828_down<-mydataNZ$RS373863828
+mydataNZ$RS373863828_down<-mapvalues(mydataNZ$RS373863828_down, c("GG", "AG", "AA" ), c("0", "1", "2"))
+mydataNZ$RS373863828_down<-as.numeric(as.character(mydataNZ$RS373863828_down))
+
+#bring in the metformin data
+metformin <- read.delim("../../MetforminListAnezka.txt", stringsAsFactors = F)
+#making a new table that only contains the SUBJECT column and the URATE column 
+metmerge <- select(metformin, SUBJECT, METFORMIN, METONLY_VS_METPLUS)
+#merging the URATE column into mydata set (by the SUBJECT column)
+mydataG <- merge(mydataNZ, metmerge, by.x = "SUBJECT", all.x = T)
+
+#DIABETESset up 
+mydataNZ <- mydataNZ[is.na(mydataNZ$DIABETES)==FALSE,]
+#in the Diabetes colunm 1= no diabetes and 2= type 2 diabetes, changing 1 to 0 and 2 to 1.
+#3 = Borderline T2D / Pre-diabetic / Impaired GT changed to NA
+mydataNZ$DIABETES<-sub(1,0, mydataNZ$DIABETES)
+mydataNZ$DIABETES<-sub(2,1, mydataNZ$DIABETES)
+mydataNZ$DIABETES[mydataNZ$DIABETES=="3"] = NA
+
+```
+
+```{r WP&EP&AP set up, echo=FALSE, message=F, warning=FALSE, esacpe = FALSE, results='asis'}
+##Subset the poly data into east 
+polywide <- subset(mydataNZ, ETHCLASS==1 | ETHCLASS==2 | ETHCLASS==9)
+
+##Subset the poly data into east 
+eastpoly <- subset(mydataNZ, ETHCLASS==1) 
+
+##Subset the poly data into west 
+westpoly <- subset(mydataNZ, ETHCLASS==2)
+
+##Subset the poly data into admixted polynesian
+adpoly <- subset(mydataNZ, ETHCLASS==9)
+
+```
+
+```{r NPH set up, echo=FALSE, message=F, warning=FALSE, esacpe = FALSE, results='asis'}
+
+#NGATI POROU HAUORA dataset setup
+
+#uploading data file that contains genotypes of 4 SNPs and phenotype information from SNPmax
+mydataNPH<-read.delim("MW_NPH.txt", stringsAsFactors = F)  
+#Extra SLC22A3 genotypes 
+NPH_SLC <- read.delim("./NPH_SLC.txt")
+#Extra CREBRF rs373863828 genotypes 
+CREB_NPHgeno <- read.delim("CREB NPH.txt")
+#merging genotypes into NPH dataset 
+mydataNPH <- merge(mydataNPH, NPH_SLC, by = "SUBJECT", all.x = T)
+mydataNPH <- merge(mydataNPH, PCAmerge, by = "SUBJECT", all.x = T)
+mydataNPH <- merge(mydataNPH, CREB_NPHgeno, by = "SUBJECT", all.x = T)
+#merging in extra phenotypes for demographic table 
+extraNPHpheno <- read.delim("NPH_pheno.txt")
+mydataNPH <- merge(mydataNPH, extraNPHpheno, by= "SUBJECT", all.x = T)
+#down coding the PCA ethnicities 
+mydataNPH$PCAETHBROAD_down <- mydataNPH$PCAETHBROAD
+mydataNPH$PCAETHBROAD_down <- mapvalues(mydataNPH$PCAETHBROAD_down, c("European", "African", "East or Southeast Asian", "East Polynesian", "West Polynesian", "Polynesian", "South Asian", "Hispanic", "Unspecified"), c("1","2","3","4","5","6","7","8","9"))
+mydataNPH$PCAETHBROAD_down <- as.numeric(as.character(mydataNPH$PCAETHBROAD_down))
+
+mydataNPH[mydataNPH==""] = NA
+mydataNPH[mydataNPH==" "] = NA
+mydataNPH<-mydataNPH[is.na(mydataNPH$GOUTAFFSTAT)==FALSE,]
+
+#replacing the 1 and 2 values for 0 and 1 in gout colunm to allow later function to work properly
+mydataNPH$GOUTAFFSTAT<-sub(1,0, mydataNPH$GOUTAFFSTAT)
+mydataNPH$GOUTAFFSTAT<-sub(2,1, mydataNPH$GOUTAFFSTAT)
+
+#The variant RS777894272 is monomorphic in NPH, all patients are AA genotype, so will not continue with analysis of this variant 
+#down coding variants in order to calculate the minor allele frequency (MAF) and display in the table with the genotype frequencies 
+mydataNPH$RS370955937_down<-mydataNPH$RS370955937
+mydataNPH$RS370955937_down<-mapvalues(mydataNPH$RS370955937_down, c("GG", "GA", "AA" ), c("0", "1", "2"))
+mydataNPH$RS370955937_down<-as.numeric(as.character(mydataNPH$RS370955937_down))
+
+mydataNPH$RS397514880_down<-mydataNPH$RS397514880
+mydataNPH$RS397514880_down<-mapvalues(mydataNPH$RS397514880_down, c("GG", "GA", "AA" ), c("0", "1", "2"))
+mydataNPH$RS397514880_down<-as.numeric(as.character(mydataNPH$RS397514880_down))
+
+mydataNPH$RS756252214_down<-mydataNPH$RS756252214
+mydataNPH$RS756252214_down<-mapvalues(mydataNPH$RS756252214_down, c("TT", "TG", "GG" ), c("0", "1", "2"))
+mydataNPH$RS756252214_down<-as.numeric(as.character(mydataNPH$RS756252214_down))
+
+mydataNPH$RS777894272_down<-mydataNPH$RS777894272
+mydataNPH$RS777894272_down<-mapvalues(mydataNPH$RS777894272_down, c("AA", "AG", "GG" ), c("0", "1", "2"))
+mydataNPH$RS777894272_down<-as.numeric(as.character(mydataNPH$RS777894272_down))
+
+mydataNPH$RS8187715_down<-mydataNPH$RS8187715
+mydataNPH$RS8187715_down<-mapvalues(mydataNPH$RS8187715_down, c("CC", "CT", "TT" ), c("0", "1", "2"))
+mydataNPH$RS8187715_down<-as.numeric(as.character(mydataNPH$RS8187715_down))
+
+mydataNPH$RS373863828_down<-mydataNPH$RS373863828
+mydataNPH$RS373863828_down<-mapvalues(mydataNPH$RS373863828_down, c("GG", "AG", "AA" ), c("0", "1", "2"))
+mydataNPH$RS373863828_down<-as.numeric(as.character(mydataNPH$RS373863828_down))
+
+#DIABETES set up 
+mydataNPH <- mydataNPH[is.na(mydataNPH$DIABETES)==FALSE,]
+
+#in the Diabetes colunm 1= no diabetes and 2= type 2 diabetes, changing 1 to 0 and 2 to 1.
+mydataNPH$DIABETES <-sub(1,0, mydataNPH$DIABETES)
+mydataNPH$DIABETES <-sub(2,1, mydataNPH$DIABETES)
+
+```
+
+#Cohort Demographics 
+
+```{r demographic data, echo=FALSE, results='asis'}
+#DEMOGRAPHIC TABLE 
+
+NPHclinical_table <- function() {
+  tab <- mydataNPH %>% 
+    select(SUBJECT, SEX, AGECOL, HEIGHT, WEIGHT, BMI, CHOLES, LDL, HDL, TRIGLY, URATE, CREAT, EGFR, GOUTAFFSTAT, DIABETES, HBA1C, PCAETHBROAD_down) %>% 
+    dplyr::summarise(n = NROW(SUBJECT),
+                     sex = npercent(SEX, "1"),
+                     AGEcm = round(mean(AGECOL, na.rm = T), digits = 2),
+                     AGEcr = paste0(range(AGECOL, na.rm = T), collapse = " - "),
+                     height = meansd(HEIGHT),
+                     weight = meansd(WEIGHT),
+                     bmi = meansd(BMI),
+                     cholestrol = meansd(CHOLES),
+                     LDL = meansd(LDL),
+                     HDL = meansd(HDL),
+                     triglycerides = meansd(TRIGLY),
+                     urate = meansd(URATE),
+                     creatinine = meansd(CREAT),
+                     hba1c = meansd(HBA1C),
+                     egfr = meansd(EGFR),
+                     gout = npercent(GOUTAFFSTAT, "1"),
+                     diabetes = npercent(DIABETES,"1"),
+                     pca = npercent(PCAETHBROAD_down, "4"),
+                     pca2 = npercent(PCAETHBROAD_down, "5")) %>% data.frame()
+  return(as.data.frame(tab))
+}
+demoNPHnew<-NPHclinical_table()
+
+PWclinical_table <- function() {
+  tab <- polywide %>% 
+    select(SUBJECT, SEX, AGECOL, HEIGHT, WEIGHT, BMI, CHOLES, LDL, HDL, TRIGLY, URATE, CREAT, EGFR, GPGOUTAFFSTAT, DIABETES, HBA1C, PCAETHBROAD_down) %>% 
+    dplyr::summarise(n = NROW(SUBJECT),
+                     gout = npercent(GPGOUTAFFSTAT, "1"),
+                     diabetes = npercent(DIABETES,"1"),
+                     bmi = meansd(BMI),
+                     sex = npercent(SEX, "1"),
+                     AGEcm = round(mean(AGECOL, na.rm = T), digits = 2),
+                     AGEcr = paste0(range(AGECOL, na.rm = T), collapse = " - "),
+                     height = meansd(HEIGHT),
+                     weight = meansd(WEIGHT),
+                     cholestrol = meansd(CHOLES),
+                     LDL = meansd(LDL),
+                     HDL = meansd(HDL),
+                     triglycerides = meansd(TRIGLY),
+                     urate = meansd(URATE),
+                     creatinine = meansd(CREAT),
+                     hba1c = meansd(HBA1C),
+                     egfr = meansd(EGFR),
+                     pca = npercent(PCAETHBROAD_down, "4"),
+                     pca2 = npercent(PCAETHBROAD_down, "5")) %>% data.frame()
+  return(as.data.frame(tab))
+}
+demopolywide<-PWclinical_table()
+
+EPclinical_table <- function() {
+  tab <- eastpoly %>% 
+    select(SUBJECT, SEX, AGECOL, HEIGHT, WEIGHT, BMI, CHOLES, LDL, HDL, TRIGLY, URATE, CREAT, EGFR, GPGOUTAFFSTAT, DIABETES, HBA1C, PCAETHBROAD_down) %>% 
+    dplyr::summarise(n = NROW(SUBJECT),
+                     gout = npercent(GPGOUTAFFSTAT, "1"),
+                     diabetes = npercent(DIABETES,"1"),
+                     bmi = meansd(BMI),
+                     sex = npercent(SEX, "1"),
+                     AGEcm = round(mean(AGECOL, na.rm = T), digits = 2),
+                     AGEcr = paste0(range(AGECOL, na.rm = T), collapse = " - "),
+                     height = meansd(HEIGHT),
+                     weight = meansd(WEIGHT),
+                     cholestrol = meansd(CHOLES),
+                     LDL = meansd(LDL),
+                     HDL = meansd(HDL),
+                     triglycerides = meansd(TRIGLY),
+                     urate = meansd(URATE),
+                     creatinine = meansd(CREAT),
+                     hba1c = meansd(HBA1C),
+                     egfr = meansd(EGFR),
+                     pca = npercent(PCAETHBROAD_down, "4"),
+                     pca2 = npercent(PCAETHBROAD_down, "5")) %>% data.frame()
+  return(as.data.frame(tab))
+}
+demoEP<-EPclinical_table()
+
+WPclinical_table <- function() {
+  tab <- westpoly %>% 
+    select(SUBJECT, SEX, AGECOL, HEIGHT, WEIGHT, BMI, CHOLES, LDL, HDL, TRIGLY, URATE, CREAT, EGFR, GPGOUTAFFSTAT, DIABETES, HBA1C, PCAETHBROAD_down) %>% 
+    dplyr::summarise(n = NROW(SUBJECT),
+                     gout = npercent(GPGOUTAFFSTAT, "1"),
+                     diabetes = npercent(DIABETES,"1"),
+                     bmi = meansd(BMI),
+                     sex = npercent(SEX, "1"),
+                     AGEcm = round(mean(AGECOL, na.rm = T), digits = 2),
+                     AGEcr = paste0(range(AGECOL, na.rm = T), collapse = " - "),
+                     height = meansd(HEIGHT),
+                     weight = meansd(WEIGHT),
+                     cholestrol = meansd(CHOLES),
+                     LDL = meansd(LDL),
+                     HDL = meansd(HDL),
+                     triglycerides = meansd(TRIGLY),
+                     urate = meansd(URATE),
+                     creatinine = meansd(CREAT),
+                     hba1c = meansd(HBA1C),
+                     egfr = meansd(EGFR),
+                     pca = "0",
+                     pca2 = npercent(PCAETHBROAD_down, "5")) %>% data.frame()
+  return(as.data.frame(tab))
+}
+demoWP<-WPclinical_table()
+
+APclinical_table <- function() {
+  tab <- adpoly %>% 
+    select(SUBJECT, SEX, AGECOL, HEIGHT, WEIGHT, BMI, CHOLES, LDL, HDL, TRIGLY, URATE, CREAT, EGFR, GPGOUTAFFSTAT, DIABETES, HBA1C, PCAETHBROAD_down) %>% 
+    dplyr::summarise(n = NROW(SUBJECT),
+                     gout = npercent(GPGOUTAFFSTAT, "1"),
+                     diabetes = npercent(DIABETES,"1"),
+                     bmi = meansd(BMI),
+                     sex = npercent(SEX, "1"),
+                     AGEcm = round(mean(AGECOL, na.rm = T), digits = 2),
+                     AGEcr = paste0(range(AGECOL, na.rm = T), collapse = " - "),
+                     height = meansd(HEIGHT),
+                     weight = meansd(WEIGHT),
+                     cholestrol = meansd(CHOLES),
+                     LDL = meansd(LDL),
+                     HDL = meansd(HDL),
+                     triglycerides = meansd(TRIGLY),
+                     urate = meansd(URATE),
+                     creatinine = meansd(CREAT),
+                     hba1c = meansd(HBA1C),
+                     egfr = meansd(EGFR),
+                     pca = npercent(PCAETHBROAD_down, "4"),
+                     pca2 = npercent(PCAETHBROAD_down, "5")) %>% data.frame()
+  return(as.data.frame(tab))
+}
+demoadpoly<-APclinical_table()
+#creating the combined demo table 
+blah<-rbind(demopolywide, demoWP, demoEP, demoadpoly, demoNPHnew)
+
+row.names(blah) <- c("Polynesian Wide", "West Polynesian", "East Polynesian", "Admixed Polynesian", "Ngati Porou Hauora")
+blah_names <- c("Participants (n)","Gout, n(%)", "Diabetes, n(%)", "BMI, mean (sd)", "Sex (male), n(%)","Age", "Age Range", "Height (cm)", "Weight (kg)", "Cholestrol (mmol/L)", "Low Density Lipids (mmol/L)", "High Density Lipids (mmol/L)", "Triglycerides (mmol/L)", "Serum Urate (mmol/L)", "Serum Creatinine (umol/L)", "HbA1c (mmol/L)", "EGFR (mL/min/1.73 m2)", "PCA East Polynesian, n(%)", "PCA West Polynesian, n(%)")
+colnames(blah) <- blah_names
+
+blah <- as.data.frame(t(blah))
+
+#kable demographic table 
+kable(blah, "html", caption = "Demographic data") %>% 
+  kable_styling("striped", full_width = FALSE) %>% 
+  footnote(general = "Unless specified data is presented as means (sd).  Estimated glomerular filtration rate (EGFR).") %>% 
+  column_spec(1, border_right = T)
+
+```
+
+#Allele Frequencies and Hardy Weinburg Equilibrium
+
+```{r Polywide, echo=FALSE, message=F, warning=FALSE, esacpe = FALSE, results='asis'}
+###Allele frequencies and Hardy Weinburg Equilibrium 
+
+#Grouped by Gout function to calcualte the allele frequencies and HWE 
+PWclin_tab <- function() {
+     tab <- polywide %>%
+     select(SUBJECT, RS397514880, RS756252214, RS370955937, RS777894272, RS8187715, RS397514880_down, RS756252214_down, RS370955937_down, RS777894272_down, RS8187715_down, GPGOUTAFFSTAT) %>%
+     group_by(GPGOUTAFFSTAT) %>%
+     dplyr::summarise(GG = npercent(RS370955937, "GG"),
+                      GA = npercent(RS370955937, "GA"),
+                      AA = npercent(RS370955937, "AA"),
+                      MAF1 = sprintf(fmt = "%.4f", (sum(RS370955937_down,na.rm = T) / (table(is.na(RS370955937_down))[1]*2))),
+                      HWE1 = sprintf(fmt ="%.4f", as.numeric(hwepval(RS370955937,"GG", "GA", "AA"))),
+                      GG2 = npercent(RS397514880, "GG"), 
+                      GA2 = npercent(RS397514880, "GA"),
+                      AA2 = npercent(RS397514880, "AA"),
+                      MAF2 = sprintf(fmt = "%.4f", (sum(RS397514880_down,na.rm = T) / (table(is.na(RS397514880_down))[1]*2))),
+                      HWE2 = sprintf(fmt ="%.4f", as.numeric(hwepval(RS397514880,"GG", "GA", "AA"))),
+                      TT3 = npercent(RS756252214, "TT"),
+                      TG3 = npercent(RS756252214, "TG"),
+                      GG3 = npercent(RS756252214, "GG"),
+                      MAF3 = sprintf(fmt = "%.4f", (sum(RS756252214_down,na.rm = T) / (table(is.na(RS756252214_down))[1]*2))),
+                      HWE3 = sprintf(fmt ="%.4f", as.numeric(hwepval(RS756252214,"TT", "TG", "GG"))),
+                      AA4 = npercent(RS777894272, "AA"),
+                      AG4 = npercent(RS777894272, "AG"),
+                      GG4 = npercent(RS777894272, "GG"),
+                      MAF4 = sprintf(fmt = "%.4f", (sum(RS777894272_down,na.rm = T) / (table(is.na(RS777894272_down))[1]*2))),
+                      HWE4 = sprintf(fmt ="%.4f", as.numeric(hwepval(RS777894272, "CC", "TC", "TT"))),
+                      CC5 = npercent(RS8187715, "CC"),
+                      CT5 = npercent(RS8187715, "TC"),
+                      TT5 = npercent(RS8187715, "TT"),
+                      MAF5 = sprintf(fmt = "%.4f", (sum(RS8187715_down,na.rm = T) / (table(is.na(RS8187715_down))[1]*2))),
+                      HWE5 = sprintf(fmt ="%.4f", as.numeric(hwepval(RS8187715, "CC", "TC", "TT")))) %>% t() %>% data.frame()
+  return(as.data.frame(tab))
+}
+#Grouped by T2D function to calcualte the allele frequencies and HWE 
+PWclin_tab2 <- function() {
+     tab <- polywide %>%
+     select(SUBJECT, RS397514880, RS756252214, RS370955937, RS777894272, RS8187715, RS397514880_down, RS756252214_down, RS370955937_down, RS777894272_down, RS8187715_down, DIABETES) %>%
+     group_by(DIABETES) %>%
+     dplyr::summarise(GG = npercent(RS370955937, "GG"),
+                      GA = npercent(RS370955937, "GA"),
+                      AA = npercent(RS370955937, "AA"),
+                      MAF1 = sprintf(fmt = "%.4f", (sum(RS370955937_down,na.rm = T) / (table(is.na(RS370955937_down))[1]*2))),
+                      HWE1 = sprintf(fmt ="%.4f", as.numeric(hwepval(RS370955937,"GG", "GA", "AA"))),
+                      GG2 = npercent(RS397514880, "GG"), 
+                      GA2 = npercent(RS397514880, "GA"),
+                      AA2 = npercent(RS397514880, "AA"),
+                      MAF2 = sprintf(fmt = "%.4f", (sum(RS397514880_down,na.rm = T) / (table(is.na(RS397514880_down))[1]*2))),
+                      HWE2 = sprintf(fmt ="%.4f", as.numeric(hwepval(RS397514880,"GG", "GA", "AA"))),
+                      TT3 = npercent(RS756252214, "TT"),
+                      TG3 = npercent(RS756252214, "TG"),
+                      GG3 = npercent(RS756252214, "GG"),
+                      MAF3 = sprintf(fmt = "%.4f", (sum(RS756252214_down,na.rm = T) / (table(is.na(RS756252214_down))[1]*2))),
+                      HWE3 = sprintf(fmt ="%.4f", as.numeric(hwepval(RS756252214,"TT", "TG", "GG"))),
+                      AA4 = npercent(RS777894272, "AA"),
+                      AG4 = npercent(RS777894272, "AG"),
+                      GG4 = npercent(RS777894272, "GG"),
+                      MAF4 = sprintf(fmt = "%.4f", (sum(RS777894272_down,na.rm = T) / (table(is.na(RS777894272_down))[1]*2))),
+                      HWE4 = sprintf(fmt ="%.4f", as.numeric(hwepval(RS777894272, "CC", "TC", "TT"))),
+                      CC5 = npercent(RS8187715, "CC"),
+                      CT5 = npercent(RS8187715, "TC"),
+                      TT5 = npercent(RS8187715, "TT"),
+                      MAF5 = sprintf(fmt = "%.4f", (sum(RS8187715_down,na.rm = T) / (table(is.na(RS8187715_down))[1]*2))),
+                      HWE5 = sprintf(fmt ="%.4f", as.numeric(hwepval(RS8187715, "CC", "TC", "TT")))) %>% t() %>% data.frame()
+  return(as.data.frame(tab))
+}
+#NZwide total
+PWclin_tab3 <- function() {
+     tab <- polywide %>%
+     select(SUBJECT, RS397514880, RS756252214, RS370955937, RS777894272, RS8187715, RS397514880_down, RS756252214_down, RS370955937_down, RS777894272_down, RS8187715_down, GPGOUTAFFSTAT) %>%
+     dplyr::summarise(STATUS = " ",
+                      GG = npercent(RS370955937, "GG"),
+                      GA = npercent(RS370955937, "GA"),
+                      AA = npercent(RS370955937, "AA"),
+                      MAF1 = sprintf(fmt = "%.4f", (sum(RS370955937_down,na.rm = T) / (table(is.na(RS370955937_down))[1]*2))),
+                      HWE1 = sprintf(fmt ="%.4f", as.numeric(hwepval(RS370955937,"GG", "GA", "AA"))),
+                      GG2 = npercent(RS397514880, "GG"), 
+                      GA2 = npercent(RS397514880, "GA"),
+                      AA2 = npercent(RS397514880, "AA"),
+                      MAF2 = sprintf(fmt = "%.4f", (sum(RS397514880_down,na.rm = T) / (table(is.na(RS397514880_down))[1]*2))),
+                      HWE2 = sprintf(fmt ="%.4f", as.numeric(hwepval(RS397514880,"GG", "GA", "AA"))),
+                      TT3 = npercent(RS756252214, "TT"),
+                      TG3 = npercent(RS756252214, "TG"),
+                      GG3 = npercent(RS756252214, "GG"),
+                      MAF3 = sprintf(fmt = "%.4f", (sum(RS756252214_down,na.rm = T) / (table(is.na(RS756252214_down))[1]*2))),
+                      HWE3 = sprintf(fmt ="%.4f", as.numeric(hwepval(RS756252214,"TT", "TG", "GG"))),
+                      AA4 = npercent(RS777894272, "AA"),
+                      AG4 = npercent(RS777894272, "AG"),
+                      GG4 = npercent(RS777894272, "GG"),
+                      MAF4 = sprintf(fmt = "%.4f", (sum(RS777894272_down,na.rm = T) / (table(is.na(RS777894272_down))[1]*2))),
+                      HWE4 = sprintf(fmt ="%.4f", as.numeric(hwepval(RS777894272, "AA", "AG", "GG"))),
+                      CC5 = npercent(RS8187715, "CC"),
+                      CT5 = npercent(RS8187715, "TC"),
+                      TT5 = npercent(RS8187715, "TT"),
+                      MAF5 = sprintf(fmt = "%.4f", (sum(RS8187715_down,na.rm = T) / (table(is.na(RS8187715_down))[1]*2))),
+                      HWE5 = sprintf(fmt ="%.4f", as.numeric(hwepval(RS8187715, "CC", "TC", "TT")))) %>% t() %>% data.frame()
+  return(as.data.frame(tab))
+}
+
+```
+
+```{r WP, echo=FALSE, message=F, warning=FALSE, esacpe = FALSE, results='asis'}
+###Allele frequencies and Hardy Weinburg Equilibrium 
+
+#Grouped by Gout function to calcualte the allele frequencies and HWE 
+WPclin_tab <- function() {
+     tab <- westpoly %>%
+     select(SUBJECT, RS397514880, RS756252214, RS370955937, RS777894272, RS8187715, RS397514880_down, RS756252214_down, RS370955937_down, RS777894272_down, RS8187715_down, GPGOUTAFFSTAT) %>%
+     group_by(GPGOUTAFFSTAT) %>%
+     dplyr::summarise(GG = npercent(RS370955937, "GG"),
+                      GA = npercent(RS370955937, "GA"),
+                      AA = npercent(RS370955937, "AA"),
+                      MAF1 = sprintf(fmt = "%.4f", (sum(RS370955937_down,na.rm = T) / (table(is.na(RS370955937_down))[1]*2))),
+                      HWE1 = sprintf(fmt ="%.4f", as.numeric(hwepval(RS370955937,"GG", "GA", "AA"))),
+                      GG2 = npercent(RS397514880, "GG"), 
+                      GA2 = npercent(RS397514880, "GA"),
+                      AA2 = npercent(RS397514880, "AA"),
+                      MAF2 = sprintf(fmt = "%.4f", (sum(RS397514880_down,na.rm = T) / (table(is.na(RS397514880_down))[1]*2))),
+                      HWE2 = sprintf(fmt ="%.4f", as.numeric(hwepval(RS397514880,"GG", "GA", "AA"))),
+                      TT3 = npercent(RS756252214, "TT"),
+                      TG3 = npercent(RS756252214, "TG"),
+                      GG3 = npercent(RS756252214, "GG"),
+                      MAF3 = sprintf(fmt = "%.4f", (sum(RS756252214_down,na.rm = T) / (table(is.na(RS756252214_down))[1]*2))),
+                      HWE3 = sprintf(fmt ="%.4f", as.numeric(hwepval(RS756252214,"TT", "TG", "GG"))),
+                      AA4 = npercent(RS777894272, "AA"),
+                      AG4 = npercent(RS777894272, "AG"),
+                      GG4 = npercent(RS777894272, "GG"),
+                      MAF4 = sprintf(fmt = "%.4f", (sum(RS777894272_down,na.rm = T) / (table(is.na(RS777894272_down))[1]*2))),
+                      HWE4 = sprintf(fmt ="%.4f", as.numeric(hwepval(RS777894272, "CC", "TC", "TT"))),
+                      CC5 = npercent(RS8187715, "CC"),
+                      CT5 = npercent(RS8187715, "TC"),
+                      TT5 = npercent(RS8187715, "TT"),
+                      MAF5 = sprintf(fmt = "%.4f", (sum(RS8187715_down,na.rm = T) / (table(is.na(RS8187715_down))[1]*2))),
+                      HWE5 = sprintf(fmt ="%.4f", as.numeric(hwepval(RS8187715, "CC", "TC", "TT")))) %>% t() %>% data.frame()
+  return(as.data.frame(tab))
+}
+#Grouped by T2D function to calcualte the allele frequencies and HWE 
+WPclin_tab2 <- function() {
+     tab <- westpoly %>%
+     select(SUBJECT, RS397514880, RS756252214, RS370955937, RS777894272, RS8187715, RS397514880_down, RS756252214_down, RS370955937_down, RS777894272_down, RS8187715_down, DIABETES) %>%
+     group_by(DIABETES) %>%
+     dplyr::summarise(GG = npercent(RS370955937, "GG"),
+                      GA = npercent(RS370955937, "GA"),
+                      AA = npercent(RS370955937, "AA"),
+                      MAF1 = sprintf(fmt = "%.4f", (sum(RS370955937_down,na.rm = T) / (table(is.na(RS370955937_down))[1]*2))),
+                      HWE1 = sprintf(fmt ="%.4f", as.numeric(hwepval(RS370955937,"GG", "GA", "AA"))),
+                      GG2 = npercent(RS397514880, "GG"), 
+                      GA2 = npercent(RS397514880, "GA"),
+                      AA2 = npercent(RS397514880, "AA"),
+                      MAF2 = sprintf(fmt = "%.4f", (sum(RS397514880_down,na.rm = T) / (table(is.na(RS397514880_down))[1]*2))),
+                      HWE2 = sprintf(fmt ="%.4f", as.numeric(hwepval(RS397514880,"GG", "GA", "AA"))),
+                      TT3 = npercent(RS756252214, "TT"),
+                      TG3 = npercent(RS756252214, "TG"),
+                      GG3 = npercent(RS756252214, "GG"),
+                      MAF3 = sprintf(fmt = "%.4f", (sum(RS756252214_down,na.rm = T) / (table(is.na(RS756252214_down))[1]*2))),
+                      HWE3 = sprintf(fmt ="%.4f", as.numeric(hwepval(RS756252214,"TT", "TG", "GG"))),
+                      AA4 = npercent(RS777894272, "AA"),
+                      AG4 = npercent(RS777894272, "AG"),
+                      GG4 = npercent(RS777894272, "GG"),
+                      MAF4 = sprintf(fmt = "%.4f", (sum(RS777894272_down,na.rm = T) / (table(is.na(RS777894272_down))[1]*2))),
+                      HWE4 = sprintf(fmt ="%.4f", as.numeric(hwepval(RS777894272, "CC", "TC", "TT"))),
+                      CC5 = npercent(RS8187715, "CC"),
+                      CT5 = npercent(RS8187715, "TC"),
+                      TT5 = npercent(RS8187715, "TT"),
+                      MAF5 = sprintf(fmt = "%.4f", (sum(RS8187715_down,na.rm = T) / (table(is.na(RS8187715_down))[1]*2))),
+                      HWE5 = sprintf(fmt ="%.4f", as.numeric(hwepval(RS8187715, "CC", "TC", "TT")))) %>% t() %>% data.frame()
+  return(as.data.frame(tab))
+}
+#NZwide total
+WPclin_tab3 <- function() {
+     tab <- westpoly %>%
+     select(SUBJECT, RS397514880, RS756252214, RS370955937, RS777894272, RS8187715, RS397514880_down, RS756252214_down, RS370955937_down, RS777894272_down, RS8187715_down, GPGOUTAFFSTAT) %>%
+     dplyr::summarise(STATUS = " ",
+                      GG = npercent(RS370955937, "GG"),
+                      GA = npercent(RS370955937, "GA"),
+                      AA = npercent(RS370955937, "AA"),
+                      MAF1 = sprintf(fmt = "%.4f", (sum(RS370955937_down,na.rm = T) / (table(is.na(RS370955937_down))[1]*2))),
+                      HWE1 = sprintf(fmt ="%.4f", as.numeric(hwepval(RS370955937,"GG", "GA", "AA"))),
+                      GG2 = npercent(RS397514880, "GG"), 
+                      GA2 = npercent(RS397514880, "GA"),
+                      AA2 = npercent(RS397514880, "AA"),
+                      MAF2 = sprintf(fmt = "%.4f", (sum(RS397514880_down,na.rm = T) / (table(is.na(RS397514880_down))[1]*2))),
+                      HWE2 = sprintf(fmt ="%.4f", as.numeric(hwepval(RS397514880,"GG", "GA", "AA"))),
+                      TT3 = npercent(RS756252214, "TT"),
+                      TG3 = npercent(RS756252214, "TG"),
+                      GG3 = npercent(RS756252214, "GG"),
+                      MAF3 = sprintf(fmt = "%.4f", (sum(RS756252214_down,na.rm = T) / (table(is.na(RS756252214_down))[1]*2))),
+                      HWE3 = sprintf(fmt ="%.4f", as.numeric(hwepval(RS756252214,"TT", "TG", "GG"))),
+                      AA4 = npercent(RS777894272, "AA"),
+                      AG4 = npercent(RS777894272, "AG"),
+                      GG4 = npercent(RS777894272, "GG"),
+                      MAF4 = sprintf(fmt = "%.4f", (sum(RS777894272_down,na.rm = T) / (table(is.na(RS777894272_down))[1]*2))),
+                      HWE4 = sprintf(fmt ="%.4f", as.numeric(hwepval(RS777894272, "AA", "AG", "GG"))),
+                      CC5 = npercent(RS8187715, "CC"),
+                      CT5 = npercent(RS8187715, "TC"),
+                      TT5 = npercent(RS8187715, "TT"),
+                      MAF5 = sprintf(fmt = "%.4f", (sum(RS8187715_down,na.rm = T) / (table(is.na(RS8187715_down))[1]*2))),
+                      HWE5 = sprintf(fmt ="%.4f", as.numeric(hwepval(RS8187715, "CC", "TC", "TT")))) %>% t() %>% data.frame()
+  return(as.data.frame(tab))
+}
+
+```
+
+```{r EP, echo=FALSE, message=F, warning=FALSE, esacpe = FALSE, results='asis'}
+###Allele frequencies and Hardy Weinburg Equilibrium 
+
+#Grouped by Gout function to calcualte the allele frequencies and HWE 
+EPclin_tab <- function() {
+     tab <- eastpoly %>%
+     select(SUBJECT, RS397514880, RS756252214, RS370955937, RS777894272, RS8187715, RS397514880_down, RS756252214_down, RS370955937_down, RS777894272_down, RS8187715_down, GPGOUTAFFSTAT) %>%
+     group_by(GPGOUTAFFSTAT) %>%
+     dplyr::summarise(GG = npercent(RS370955937, "GG"),
+                      GA = npercent(RS370955937, "GA"),
+                      AA = npercent(RS370955937, "AA"),
+                      MAF1 = sprintf(fmt = "%.4f", (sum(RS370955937_down,na.rm = T) / (table(is.na(RS370955937_down))[1]*2))),
+                      HWE1 = sprintf(fmt ="%.4f", as.numeric(hwepval(RS370955937,"GG", "GA", "AA"))),
+                      GG2 = npercent(RS397514880, "GG"), 
+                      GA2 = npercent(RS397514880, "GA"),
+                      AA2 = npercent(RS397514880, "AA"),
+                      MAF2 = sprintf(fmt = "%.4f", (sum(RS397514880_down,na.rm = T) / (table(is.na(RS397514880_down))[1]*2))),
+                      HWE2 = sprintf(fmt ="%.4f", as.numeric(hwepval(RS397514880,"GG", "GA", "AA"))),
+                      TT3 = npercent(RS756252214, "TT"),
+                      TG3 = npercent(RS756252214, "TG"),
+                      GG3 = npercent(RS756252214, "GG"),
+                      MAF3 = sprintf(fmt = "%.4f", (sum(RS756252214_down,na.rm = T) / (table(is.na(RS756252214_down))[1]*2))),
+                      HWE3 = sprintf(fmt ="%.4f", as.numeric(hwepval(RS756252214,"TT", "TG", "GG"))),
+                      AA4 = npercent(RS777894272, "AA"),
+                      AG4 = npercent(RS777894272, "AG"),
+                      GG4 = "0",
+                      MAF4 = sprintf(fmt = "%.4f", (sum(RS777894272_down,na.rm = T) / (table(is.na(RS777894272_down))[1]*2))),
+                      HWE4 = sprintf(fmt ="%.4f", as.numeric(hwepval(RS777894272, "AA", "AG", "GG"))),
+                      CC5 = npercent(RS8187715, "CC"),
+                      CT5 = npercent(RS8187715, "TC"),
+                      TT5 = npercent(RS8187715, "TT"),
+                      MAF5 = sprintf(fmt = "%.4f", (sum(RS8187715_down,na.rm = T) / (table(is.na(RS8187715_down))[1]*2))),
+                      HWE5 = sprintf(fmt ="%.4f", as.numeric(hwepval(RS8187715, "CC", "TC", "TT")))) %>% t() %>% data.frame()
+  return(as.data.frame(tab))
+}
+#Grouped by T2D function to calcualte the allele frequencies and HWE 
+EPclin_tab2 <- function() {
+     tab <- eastpoly %>%
+     select(SUBJECT, RS397514880, RS756252214, RS370955937, RS777894272, RS8187715, RS397514880_down, RS756252214_down, RS370955937_down, RS777894272_down, RS8187715_down, DIABETES) %>%
+     group_by(DIABETES) %>%
+     dplyr::summarise(GG = npercent(RS370955937, "GG"),
+                      GA = npercent(RS370955937, "GA"),
+                      AA = npercent(RS370955937, "AA"),
+                      MAF1 = sprintf(fmt = "%.4f", (sum(RS370955937_down,na.rm = T) / (table(is.na(RS370955937_down))[1]*2))),
+                      HWE1 = sprintf(fmt ="%.4f", as.numeric(hwepval(RS370955937,"GG", "GA", "AA"))),
+                      GG2 = npercent(RS397514880, "GG"), 
+                      GA2 = npercent(RS397514880, "GA"),
+                      AA2 = npercent(RS397514880, "AA"),
+                      MAF2 = sprintf(fmt = "%.4f", (sum(RS397514880_down,na.rm = T) / (table(is.na(RS397514880_down))[1]*2))),
+                      HWE2 = sprintf(fmt ="%.4f", as.numeric(hwepval(RS397514880,"GG", "GA", "AA"))),
+                      TT3 = npercent(RS756252214, "TT"),
+                      TG3 = npercent(RS756252214, "TG"),
+                      GG3 = npercent(RS756252214, "GG"),
+                      MAF3 = sprintf(fmt = "%.4f", (sum(RS756252214_down,na.rm = T) / (table(is.na(RS756252214_down))[1]*2))),
+                      HWE3 = sprintf(fmt ="%.4f", as.numeric(hwepval(RS756252214,"TT", "TG", "GG"))),
+                      AA4 = npercent(RS777894272, "AA"),
+                      AG4 = npercent(RS777894272, "AG"),
+                      GG4 = "0",
+                      MAF4 = sprintf(fmt = "%.4f", (sum(RS777894272_down,na.rm = T) / (table(is.na(RS777894272_down))[1]*2))),
+                      HWE4 = sprintf(fmt ="%.4f", as.numeric(hwepval(RS777894272, "AA", "AG", "GG"))),
+                      CC5 = npercent(RS8187715, "CC"),
+                      CT5 = npercent(RS8187715, "TC"),
+                      TT5 = npercent(RS8187715, "TT"),
+                      MAF5 = sprintf(fmt = "%.4f", (sum(RS8187715_down,na.rm = T) / (table(is.na(RS8187715_down))[1]*2))),
+                      HWE5 = sprintf(fmt ="%.4f", as.numeric(hwepval(RS8187715, "CC", "TC", "TT")))) %>% t() %>% data.frame()
+  return(as.data.frame(tab))
+}
+#NZwide total
+EPclin_tab3 <- function() {
+     tab <- eastpoly %>%
+     select(SUBJECT, RS397514880, RS756252214, RS370955937, RS777894272, RS8187715, RS397514880_down, RS756252214_down, RS370955937_down, RS777894272_down, RS8187715_down, GPGOUTAFFSTAT) %>%
+     dplyr::summarise(STATUS = " ",
+                      GG = npercent(RS370955937, "GG"),
+                      GA = npercent(RS370955937, "GA"),
+                      AA = npercent(RS370955937, "AA"),
+                      MAF1 = sprintf(fmt = "%.4f", (sum(RS370955937_down,na.rm = T) / (table(is.na(RS370955937_down))[1]*2))),
+                      HWE1 = sprintf(fmt ="%.4f", as.numeric(hwepval(RS370955937,"GG", "GA", "AA"))),
+                      GG2 = npercent(RS397514880, "GG"), 
+                      GA2 = npercent(RS397514880, "GA"),
+                      AA2 = npercent(RS397514880, "AA"),
+                      MAF2 = sprintf(fmt = "%.4f", (sum(RS397514880_down,na.rm = T) / (table(is.na(RS397514880_down))[1]*2))),
+                      HWE2 = sprintf(fmt ="%.4f", as.numeric(hwepval(RS397514880,"GG", "GA", "AA"))),
+                      TT3 = npercent(RS756252214, "TT"),
+                      TG3 = npercent(RS756252214, "TG"),
+                      GG3 = npercent(RS756252214, "GG"),
+                      MAF3 = sprintf(fmt = "%.4f", (sum(RS756252214_down,na.rm = T) / (table(is.na(RS756252214_down))[1]*2))),
+                      HWE3 = sprintf(fmt ="%.4f", as.numeric(hwepval(RS756252214,"TT", "TG", "GG"))),
+                      AA4 = npercent(RS777894272, "AA"),
+                      AG4 = npercent(RS777894272, "AG"),
+                      GG4 = "0",
+                      MAF4 = sprintf(fmt = "%.4f", (sum(RS777894272_down,na.rm = T) / (table(is.na(RS777894272_down))[1]*2))),
+                      HWE4 = sprintf(fmt ="%.4f", as.numeric(hwepval(RS777894272, "AA", "AG", "GG"))),
+                      CC5 = npercent(RS8187715, "CC"),
+                      CT5 = npercent(RS8187715, "TC"),
+                      TT5 = npercent(RS8187715, "TT"),
+                      MAF5 = sprintf(fmt = "%.4f", (sum(RS8187715_down,na.rm = T) / (table(is.na(RS8187715_down))[1]*2))),
+                      HWE5 = sprintf(fmt ="%.4f", as.numeric(hwepval(RS8187715, "CC", "TC", "TT")))) %>% t() %>% data.frame()
+  return(as.data.frame(tab))
+}
+
+```
+
+```{r NPH, echo=FALSE, message=F, warning=FALSE, esacpe = FALSE, results='asis'}
+###Allele frequencies and Hardy Weinburg Equilibrium 
+
+#Grouped by Gout function to calcualte the allele frequencies and HWE 
+Qclin_tab <- function() {
+     tab <- mydataNPH %>%
+     select(SUBJECT, RS397514880, RS756252214, RS370955937, RS777894272, RS8187715, RS397514880_down, RS756252214_down, RS370955937_down, RS777894272_down, RS8187715_down,  GOUTAFFSTAT) %>%
+     group_by(GOUTAFFSTAT) %>%
+     dplyr::summarise(GG = npercent(RS370955937, "GG"),
+                      GA = npercent(RS370955937, "GA"),
+                      AA = npercent(RS370955937, "AA"),
+                      MAF1 = sprintf(fmt = "%.4f", (sum(RS370955937_down,na.rm = T) / (table(is.na(RS370955937_down))[1]*2))),
+                      HWE1 = sprintf(fmt ="%.4f", as.numeric(hwepval(RS370955937,"GG", "GA", "AA"))),
+                      GG2 = npercent(RS397514880, "GG"), 
+                      GA2 = npercent(RS397514880, "GA"),
+                      AA2 = npercent(RS397514880, "AA"),
+                      MAF2 = sprintf(fmt = "%.4f", (sum(RS397514880_down,na.rm = T) / (table(is.na(RS397514880_down))[1]*2))),
+                      HWE2 = sprintf(fmt ="%.4f", as.numeric(hwepval(RS397514880,"GG", "GA", "AA"))),
+                      TT3 = npercent(RS756252214, "TT"),
+                      TG3 = npercent(RS756252214, "TG"),
+                      GG3 = npercent(RS756252214, "GG"),
+                      MAF3 = sprintf(fmt = "%.4f", (sum(RS756252214_down,na.rm = T) / (table(is.na(RS756252214_down))[1]*2))),
+                      HWE3 = sprintf(fmt ="%.4f", as.numeric(hwepval(RS756252214,"TT", "TG", "GG"))),
+                      AA4 = npercent(RS777894272, "AA"),
+                      AG4 = npercent(RS777894272, "AG"),
+                      GG4 = "0",
+                      MAF4 = sprintf(fmt = "%.4f", (sum(RS777894272_down,na.rm = T) / (table(is.na(RS777894272_down))[1]*2))),
+                      HWE4 = sprintf(fmt ="%.4f", as.numeric(hwepval(RS777894272, "AA", "AG", "GG"))),
+                      CC5 = npercent(RS8187715, "CC"),
+                      CT5 = npercent(RS8187715, "CT"),
+                      TT5 = npercent(RS8187715, "TT"),
+                      MAF5 = sprintf(fmt = "%.4f", (sum(RS8187715_down,na.rm = T) / (table(is.na(RS8187715_down))[1]*2))),
+                      HWE5 = sprintf(fmt ="%.4f", as.numeric(hwepval(RS8187715, "CC", "CT", "TT")))) %>% t() %>% data.frame()
+  return(as.data.frame(tab))
+}
+#Grouped by T2D function to calcualte the allele frequencies and HWE 
+Qclin_tab2 <- function() {
+     tab <- mydataNPH %>%
+     select(SUBJECT, RS397514880, RS756252214, RS370955937, RS777894272, RS8187715, RS397514880_down, RS756252214_down, RS370955937_down, RS777894272_down, RS8187715_down, DIABETES) %>%
+     group_by(DIABETES) %>%
+     dplyr::summarise(GG = npercent(RS370955937, "GG"),
+                      GA = npercent(RS370955937, "GA"),
+                      AA = npercent(RS370955937, "AA"),
+                      MAF1 = sprintf(fmt = "%.4f", (sum(RS370955937_down,na.rm = T) / (table(is.na(RS370955937_down))[1]*2))),
+                      HWE1 = sprintf(fmt ="%.4f", as.numeric(hwepval(RS370955937,"GG", "GA", "AA"))),
+                      GG2 = npercent(RS397514880, "GG"), 
+                      GA2 = npercent(RS397514880, "GA"),
+                      AA2 = npercent(RS397514880, "AA"),
+                      MAF2 = sprintf(fmt = "%.4f", (sum(RS397514880_down,na.rm = T) / (table(is.na(RS397514880_down))[1]*2))),
+                      HWE2 = sprintf(fmt ="%.4f", as.numeric(hwepval(RS397514880,"GG", "GA", "AA"))),
+                      TT3 = npercent(RS756252214, "TT"),
+                      TG3 = npercent(RS756252214, "TG"),
+                      GG3 = npercent(RS756252214, "GG"),
+                      MAF3 = sprintf(fmt = "%.4f", (sum(RS756252214_down,na.rm = T) / (table(is.na(RS756252214_down))[1]*2))),
+                      HWE3 = sprintf(fmt ="%.4f", as.numeric(hwepval(RS756252214,"TT", "TG", "GG"))),
+                      AA4 = npercent(RS777894272, "AA"),
+                      AG4 = npercent(RS777894272, "AG"),
+                      GG4 = "0",
+                      MAF4 = sprintf(fmt = "%.4f", (sum(RS777894272_down,na.rm = T) / (table(is.na(RS777894272_down))[1]*2))),
+                      HWE4 = sprintf(fmt ="%.4f", as.numeric(hwepval(RS777894272, "AA", "AG", "GG"))),
+                      CC5 = npercent(RS8187715, "CC"),
+                      CT5 = npercent(RS8187715, "CT"),
+                      TT5 = npercent(RS8187715, "TT"),
+                      MAF5 = sprintf(fmt = "%.4f", (sum(RS8187715_down,na.rm = T) / (table(is.na(RS8187715_down))[1]*2))),
+                      HWE5 = sprintf(fmt ="%.4f", as.numeric(hwepval(RS8187715, "CC", "CT", "TT")))) %>% t() %>% data.frame()
+  return(as.data.frame(tab))
+}
+#NPH total
+Qclin_tab3 <- function() {
+     tab <- mydataNPH %>%
+     select(SUBJECT, RS397514880, RS756252214, RS370955937, RS777894272, RS8187715, RS397514880_down, RS756252214_down, RS370955937_down, RS777894272_down, RS8187715_down, GOUTAFFSTAT) %>%
+     dplyr::summarise(STATUS = " ",
+                      GG = npercent(RS370955937, "GG"),
+                      GA = npercent(RS370955937, "GA"),
+                      AA = npercent(RS370955937, "AA"),
+                      MAF1 = sprintf(fmt = "%.4f", (sum(RS370955937_down,na.rm = T) / (table(is.na(RS370955937_down))[1]*2))),
+                      HWE1 = sprintf(fmt ="%.4f", as.numeric(hwepval(RS370955937,"GG", "GA", "AA"))),
+                      GG2 = npercent(RS397514880, "GG"), 
+                      GA2 = npercent(RS397514880, "GA"),
+                      AA2 = npercent(RS397514880, "AA"),
+                      MAF2 = sprintf(fmt = "%.4f", (sum(RS397514880_down,na.rm = T) / (table(is.na(RS397514880_down))[1]*2))),
+                      HWE2 = sprintf(fmt ="%.4f", as.numeric(hwepval(RS397514880,"GG", "GA", "AA"))),
+                      TT3 = npercent(RS756252214, "TT"),
+                      TG3 = npercent(RS756252214, "TG"),
+                      GG3 = npercent(RS756252214, "GG"),
+                      MAF3 = sprintf(fmt = "%.4f", (sum(RS756252214_down,na.rm = T) / (table(is.na(RS756252214_down))[1]*2))),
+                      HWE3 = sprintf(fmt ="%.4f", as.numeric(hwepval(RS756252214,"TT", "TG", "GG"))),
+                      AA4 = npercent(RS777894272, "AA"),
+                      AG4 = npercent(RS777894272, "AG"),
+                      GG4 = "0",
+                      MAF4 = sprintf(fmt = "%.4f", (sum(RS777894272_down,na.rm = T) / (table(is.na(RS777894272_down))[1]*2))),
+                      HWE4 = sprintf(fmt ="%.4f", as.numeric(hwepval(RS777894272, "AA", "AG", "GG"))),
+                      CC5 = npercent(RS8187715, "CC"),
+                      CT5 = npercent(RS8187715, "CT"),
+                      TT5 = npercent(RS8187715, "TT"),
+                      MAF5 = sprintf(fmt = "%.4f", (sum(RS8187715_down,na.rm = T) / (table(is.na(RS8187715_down))[1]*2))),
+                      HWE5 = sprintf(fmt ="%.4f", as.numeric(hwepval(RS8187715, "CC", "CT", "TT")))) %>% t() %>% data.frame()
+  return(as.data.frame(tab))
+}
+
+```
+
+```{r combining tables, echo=FALSE, message=F, warning=FALSE, esacpe = FALSE, results='asis'}
+#creating the table 
+cuz<-c("Status","GG", "GA", "AA", "LIPE (MAF)", "LIPE (HWE)", "GG.", "GA.", "AA.", "TSC1 (MAF)", "TSC1 (HWE)", "TT", "TG", ".GG", "WFS1 (MAF)", "WFS1  (HWE)", ".AA", "AG", "GG,", "CREB3L2 (MAF)", "CREB3L2 (HWE)", "CC", "CT", "TT.,", "SLC22A3 (MAF)", "SLC22A3 (HWE)")
+
+#Poly wide frequencies  
+PWfreq<-PWclin_tab() #gout 
+row.names(PWfreq)<-cuz
+PWfreq2<- PWclin_tab2() #diabetes 
+row.names(PWfreq2)<-cuz
+PWfreq2$X3 <- NULL
+PWfreq3<- PWclin_tab3() #total 
+row.names(PWfreq3)<-cuz
+
+#gout, diabetes and total frequencies 
+PWfreq4<- cbind.data.frame(PWfreq3, PWfreq, PWfreq2)
+PWfreq4 <- as.data.frame(t(PWfreq4))
+PWfreq4$Status <- NULL
+PWfreq4 <- as.data.frame(t(PWfreq4))
+colnames(PWfreq4) <- c("Total", "Controls.", "Cases.", "Controls", "Cases")
+
+#EP frequencies  
+EPfreq<-EPclin_tab() #gout 
+row.names(EPfreq)<-cuz
+EPfreq2<- EPclin_tab2() #diabetes 
+row.names(EPfreq2)<-cuz
+EPfreq2$X3 <- NULL
+EPfreq3<- EPclin_tab3() #total 
+row.names(EPfreq3)<-cuz
+
+#gout, diabetes and total frequencies 
+EPfreq4<- cbind.data.frame(EPfreq3, EPfreq, EPfreq2)
+EPfreq4 <- as.data.frame(t(EPfreq4))
+EPfreq4$Status <- NULL
+EPfreq4 <- as.data.frame(t(EPfreq4))
+colnames(EPfreq4) <- c("Total'", "Controls.'", "Cases.'", "Controls'", "Cases'")
+
+#WP frequencies  
+WPfreq<-WPclin_tab() #gout 
+row.names(WPfreq)<-cuz
+WPfreq2<- WPclin_tab2() #diabetes 
+row.names(WPfreq2)<-cuz
+WPfreq2$X3 <- NULL
+WPfreq3<- WPclin_tab3() #total 
+row.names(WPfreq3)<-cuz
+
+#gout, diabetes and total frequencies 
+WPfreq4<- cbind.data.frame(WPfreq3, WPfreq, WPfreq2)
+WPfreq4 <- as.data.frame(t(WPfreq4))
+WPfreq4$Status <- NULL
+WPfreq4 <- as.data.frame(t(WPfreq4))
+colnames(WPfreq4) <- c("'Total", "'Controls.", "'Cases.", "'Controls", "'Cases")
+
+#Ngati Porou Hauora frequencies 
+Qfreq<-Qclin_tab() #gout 
+row.names(Qfreq)<-cuz
+Qfreq2<- Qclin_tab2() #diabetes 
+row.names(Qfreq2)<-cuz
+Qfreq3<- Qclin_tab3() #total 
+row.names(Qfreq3)<-cuz
+
+#gout, diabetes and total frequencies 
+Qfreq4<- cbind.data.frame(Qfreq3, Qfreq, Qfreq2)
+Qfreq4 <- as.data.frame(t(Qfreq4))
+Qfreq4$Status <- NULL
+Qfreq4 <- as.data.frame(t(Qfreq4))
+colnames(Qfreq4) <- c("Total,", ",Controls", ",Cases", "Controls,", "Cases,")
+
+```
+
+```{r final table, echo=FALSE, message=F, warning=FALSE, esacpe = FALSE, results='asis'}
+
+#combining NZ wide and NPH frequency tables 
+all_freq <- cbind.data.frame(PWfreq4, WPfreq4, EPfreq4, Qfreq4)
+better <- rep(c("Total",(rep(c("Cases", "Controls"),2))),4)
+
+#making kable table 
+all_freq%>%
+  mutate_at(vars(contains("(HWE)")), funs(format_p)) %>% 
+  kable(., caption="Genotype frequencies, minor allele frequencies and Hardy Weinberg", format = "html", escape = F, col.names = better)%>%
+  kable_styling(c("striped", "bordered"), full_width = T) %>% 
+  add_header_above(c(" "= 2, "Gout"=  2, "Diabetes"= 2, " " = 1, "Gout"=  2, "Diabetes"= 2, " " = 1, "Gout"=  2, "Diabetes"= 2," " = 1, "Gout"=  2, "Diabetes"= 2)) %>% 
+  add_header_above(c(" "= 1, "Polynesian Wide"= 5, "West Polynesian" = 5, "East Polynesian" = 5, "Ngati Porou Hauora" = 5)) %>% 
+  group_rows(index = c("LIPE (rs370955937)" = 5, "TSC1 (rs397514880)" = 5, "WFS1 (rs756252214)" = 5, "CREB3L2 (rs777894272)" = 5, "SLC22A3 (rs8187715)" = 5)) %>% 
+  column_spec(1, border_right = T) %>% 
+  column_spec(6, border_right = T) %>% 
+  column_spec(11, border_right = T) %>%
+  column_spec(16, border_right = T) %>%
+  column_spec(2, background = "gainsboro") %>% 
+  column_spec(7, background = "gainsboro") %>% 
+  column_spec(12, background = "gainsboro") %>% 
+  column_spec(17, background = "gainsboro") %>% 
+  footnote(general = "Minor allele frequency (MAF), Hardy Weinberg Equilibrium (HWE)")
+
+```
+
+
+#Type 2 Diabetes logistic regressions 
+
+###Polynesian Wide Cohort 
+```{r, echo=FALSE, message=F, warning=FALSE, results='asis'}
+
+#creating a list with the names of the snps 
+snplist<-c("RS370955937_down", "RS397514880_down", "RS756252214_down", "RS777894272_down", "RS8187715_down")
+
+#creating the results data, col and row names
+resultstablePW2 <- (data.frame(matrix(nrow=length(snplist), ncol=19)))
+names(resultstablePW2) <- c("SNP", "n", "genotypes", "alleles", "Beta", "SE", "OR", "LowerCI", "UpperCI", "P", "n.adj", "genotypes.adj", "alleles.adj","Beta.adj","SE.adj", "OR.adj", "LowerCI.adj", "UpperCI.adj", "P.adj")
+resultstablePW2[,1] <- snplist
+
+#performing the logistical analysis, first on the unadjusted data and then adjusted data 
+for(snp in snplist){  
+  resultstablePW2[resultstablePW2$SNP == snp,2:10]<-results(
+    test<-glm(as.numeric(DIABETES)~as.numeric(as.factor(polywide[, snp])), family=binomial, data=polywide),
+    genotypes<-table(na.omit(polywide[, snp])),
+    s<-levels(factor(polywide[, snp]))
+  )
+  resultstablePW2[resultstablePW2$SNP == snp,11:19]<-results(
+    test<-glm(as.numeric(DIABETES)~as.numeric(as.factor(polywide[, snp]))+as.numeric(AGECOL)+as.factor(SEX)+PCA1+PCA2+PCA3+PCA4+PCA5+PCA6+PCA7+PCA8+PCA9+ PCA10+as.numeric(PCAETHBROAD_down), family=binomial, data=polywide),
+    genotypes<-table(na.omit(polywide[, snp])),
+    s<-levels(factor(polywide[, snp]))
+  )
+}
+
+#editing the results table to show the actual alleles instead of 0, 1 and 2 
+resultstablePW2[1,"alleles"]="GG/GA/AA"
+resultstablePW2[2,"alleles"]="GG/GA/AA"
+resultstablePW2[3,"alleles"]="TT/TG/GG"
+resultstablePW2[4,"alleles"]="AA/AG/GG"
+resultstablePW2[5,"alleles"]="CC/CT/TT"
+#editing the results table to show Gene name and rs number 
+resultstablePW2[1,"SNP"]= "LIPE (rs370955937)"
+resultstablePW2[2,"SNP"]= "TSC1 (rs397514880)"
+resultstablePW2[3,"SNP"]= "WFS1 (rs756252214)"
+resultstablePW2[4,"SNP"]= "CREB3L2 (rs777894272)"
+resultstablePW2[5,"SNP"]= "SLC22A3 (rs8187715)"
+
+#removing the genotypes.adj, alleles.adj and the down coding SNP colunm from the table
+resultstablePW2$genotypes.adj <- NULL
+resultstablePW2$alleles.adj <- NULL
+
+#highlighting significant p-vaues and making kable table
+resultstablePW2%>%
+  mutate_at(vars(starts_with("P")), funs(format_p) ) %>% 
+  kable(., caption="Type 2 diabetes association in Polynesian wide cohort", format = "html", escape = F)%>%
+  kable_styling(bootstrap_options = c("striped", "hover"), full_width = F)%>%
+  add_header_above(c(" " = 4, "Unadjusted" = 6, "Adjusted" = 7)) %>%
+  column_spec(11:17, background = "lightcyan") %>% 
+  footnote(general = "Adjusted by age, sex and PC's 1-10 and broad PCA ancestry")
+
+```
+
+###West Polynesian
+```{r, echo=FALSE, message=F, warning=FALSE, results='asis'}
+
+#creating the results data, col and row names
+resultstableWP2 <- (data.frame(matrix(nrow=length(snplist), ncol=19)))
+names(resultstableWP2) <- c("SNP", "n", "genotypes", "alleles", "Beta", "SE", "OR", "LowerCI", "UpperCI", "P", "n.adj", "genotypes.adj", "alleles.adj","Beta.adj","SE.adj", "OR.adj", "LowerCI.adj", "UpperCI.adj", "P.adj")
+resultstableWP2[,1] <- snplist
+
+#performing the logistical analysis, first on the unadjusted data and then adjusted data 
+for(snp in snplist){  
+  resultstableWP2[resultstableWP2$SNP == snp,2:10]<-results(
+    test<-glm(as.numeric(DIABETES)~as.numeric(as.factor(westpoly[, snp])), family=binomial, data=westpoly),
+    genotypes<-table(na.omit(westpoly[, snp])),
+    s<-levels(factor(westpoly[, snp]))
+  )
+  resultstableWP2[resultstableWP2$SNP == snp,11:19]<-results(
+    test<-glm(as.numeric(DIABETES)~as.numeric(as.factor(westpoly[, snp]))+as.numeric(AGECOL)+as.factor(SEX)+PCA1+PCA2+PCA3+PCA4+PCA5+PCA6+PCA7+PCA8+PCA9+ PCA10+as.numeric(PCAETHBROAD_down), family=binomial, data=westpoly),
+    genotypes<-table(na.omit(westpoly[, snp])),
+    s<-levels(factor(westpoly[, snp]))
+  )
+}
+
+#editing the results table to show the actual alleles instead of 0, 1 and 2 
+resultstableWP2[1,"alleles"]="GG/GA/AA"
+resultstableWP2[2,"alleles"]="GG/GA/AA"
+resultstableWP2[3,"alleles"]="TT/TG/GG"
+resultstableWP2[4,"alleles"]="AA/AG/GG"
+resultstableWP2[5,"alleles"]="CC/CT/TT"
+#editing the results table to show Gene name and rs number
+resultstableWP2[1,"SNP"]= "LIPE (rs370955937)"
+resultstableWP2[2,"SNP"]= "TSC1 (rs397514880)"
+resultstableWP2[3,"SNP"]= "WFS1 (rs756252214)"
+resultstableWP2[4,"SNP"]= "CREB3L2 (rs777894272)"
+resultstableWP2[5,"SNP"]= "SLC22A3 (rs8187715)"
+
+#removing the genotypes.adj, alleles.adj and the down coding SNP colunm from the table
+resultstableWP2$genotypes.adj <- NULL
+resultstableWP2$alleles.adj <- NULL
+
+#highlighting significant p-vaues and making kable table
+resultstableWP2%>%
+  mutate_at(vars(starts_with("P")), funs(format_p) ) %>% 
+  kable(., caption="Type 2 diabetes associations in West Polynesian", format = "html", escape = F)%>%
+  kable_styling(bootstrap_options = c("striped", "hover"), full_width = F)%>%
+  add_header_above(c(" " = 4, "Unadjusted" = 6, "Adjusted" = 7)) %>%
+  column_spec(11:17, background = "lightcyan") %>% 
+  footnote(general = "Adjusted by age, sex, PC's 1-10 and broad PCA ancestry")
+
+```
+
+###East Polynesian
+```{r, echo=FALSE, message=F, warning=FALSE, results='asis'}
+###T2D association test 
+#creating the results data, col and row names
+resultstableEP2 <- (data.frame(matrix(nrow=length(snplist), ncol=19)))
+names(resultstableEP2) <- c("SNP", "n", "genotypes", "alleles", "Beta", "SE", "OR", "LowerCI", "UpperCI", "P", "n.adj", "genotypes.adj", "alleles.adj","Beta.adj","SE.adj", "OR.adj", "LowerCI.adj", "UpperCI.adj", "P.adj")
+resultstableEP2[,1] <- snplist
+
+#performing the logistical analysis, first on the unadjusted data and then adjusted data 
+for(snp in snplist){  
+  resultstableEP2[resultstableEP2$SNP == snp,2:10]<-results(
+    test<-glm(as.numeric(DIABETES)~as.numeric(as.factor(eastpoly[, snp])), family=binomial, data=eastpoly),
+    genotypes<-table(na.omit(eastpoly[, snp])),
+    s<-levels(factor(eastpoly[, snp]))
+  )
+  resultstableEP2[resultstableEP2$SNP == snp,11:19]<-results(
+    test<-glm(as.numeric(DIABETES)~as.numeric(as.factor(eastpoly[, snp]))+as.numeric(AGECOL)+as.factor(SEX)+PCA1+PCA2+PCA3+PCA4+PCA5+PCA6+PCA7+PCA8+PCA9+ PCA10+as.numeric(PCAETHBROAD_down), family=binomial, data=eastpoly),
+    genotypes<-table(na.omit(eastpoly[, snp])),
+    s<-levels(factor(eastpoly[, snp]))
+  )
+}
+
+#editing the results table to show the actual alleles instead of 0, 1 and 2 
+resultstableEP2[1,"alleles"]="GG/GA/AA"
+resultstableEP2[2,"alleles"]="GG/GA/AA"
+resultstableEP2[3,"alleles"]="TT/TG/GG"
+resultstableEP2[4,"alleles"]="AA/AG/GG"
+resultstableEP2[5,"alleles"]="CC/CT/TT"
+#editing the results table to show Gene name and rs number
+resultstableEP2[1,"SNP"]= "LIPE (rs370955937)"
+resultstableEP2[2,"SNP"]= "TSC1 (rs397514880)"
+resultstableEP2[3,"SNP"]= "WFS1 (rs756252214)"
+resultstableEP2[4,"SNP"]= "CREB3L2 (rs777894272)"
+resultstableEP2[5,"SNP"]= "SLC22A3 (rs8187715)"
+
+#removing the genotypes.adj, alleles.adj and the down coding SNP colunm from the table
+resultstableEP2$genotypes.adj <- NULL
+resultstableEP2$alleles.adj <- NULL
+
+#highlighting significant p-vaues and making kable table
+resultstableEP2%>%
+  mutate_at(vars(starts_with("P")), funs(format_p) ) %>% 
+  kable(., caption="Type 2 diabetes associations in East Polynesian", format = "html", escape = F)%>%
+  kable_styling(bootstrap_options = c("striped", "hover"), full_width = F)%>%
+  add_header_above(c(" " = 4, "Unadjusted" = 6, "Adjusted" = 7)) %>%
+  column_spec(11:17, background = "lightcyan") %>% 
+  footnote(general = "Adjusted by age, sex, PC's 1-10 and broad PCA ancestry")
+
+```
+
+###Admixed Polynesian
+```{r, echo=FALSE, message=F, warning=FALSE, results='asis'}
+###T2D association test 
+#creating the results data, col and row names
+resultstableADP <- (data.frame(matrix(nrow=length(snplist), ncol=19)))
+names(resultstableADP) <- c("SNP", "n", "genotypes", "alleles", "Beta", "SE", "OR", "LowerCI", "UpperCI", "P", "n.adj", "genotypes.adj", "alleles.adj","Beta.adj","SE.adj", "OR.adj", "LowerCI.adj", "UpperCI.adj", "P.adj")
+resultstableADP[,1] <- snplist
+
+#performing the logistical analysis, first on the unadjusted data and then adjusted data 
+for(snp in snplist){  
+  resultstableADP[resultstableADP$SNP == snp,2:10]<-results(
+    test<-glm(as.numeric(DIABETES)~as.numeric(as.factor(adpoly[, snp])), family=binomial, data=adpoly),
+    genotypes<-table(na.omit(adpoly[, snp])),
+    s<-levels(factor(adpoly[, snp]))
+  )
+  resultstableADP[resultstableADP$SNP == snp,11:19]<-results(
+    test<-glm(as.numeric(DIABETES)~as.numeric(as.factor(adpoly[, snp]))+as.numeric(AGECOL)+as.factor(SEX)+PCA1+PCA2+PCA3+PCA4+PCA5+PCA6+PCA7+PCA8+PCA9+ PCA10+as.numeric(PCAETHBROAD_down), family=binomial, data=adpoly),
+    genotypes<-table(na.omit(adpoly[, snp])),
+    s<-levels(factor(adpoly[, snp]))
+  )
+}
+
+#editing the results table to show the actual alleles instead of 0, 1 and 2 
+resultstableADP[1,"alleles"]="GG/GA/AA"
+resultstableADP[2,"alleles"]="GG/GA/AA"
+resultstableADP[3,"alleles"]="TT/TG/GG"
+resultstableADP[4,"alleles"]="AA/AG/GG"
+resultstableADP[5,"alleles"]="CC/CT/TT"
+#editing the results table to show Gene name and rs number
+resultstableADP[1,"SNP"]= "LIPE (rs370955937)"
+resultstableADP[2,"SNP"]= "TSC1 (rs397514880)"
+resultstableADP[3,"SNP"]= "WFS1 (rs756252214)"
+resultstableADP[4,"SNP"]= "CREB3L2 (rs777894272)"
+resultstableADP[5,"SNP"]= "SLC22A3 (rs8187715)"
+
+#removing the genotypes.adj, alleles.adj and the down coding SNP colunm from the table
+resultstableADP$genotypes.adj <- NULL
+resultstableADP$alleles.adj <- NULL
+
+#highlighting significant p-vaues and making kable table
+resultstableADP%>%
+  mutate_at(vars(starts_with("P")), funs(format_p) ) %>% 
+  kable(., caption="Type 2 diabetes associations in Admixed Polynesian", format = "html", escape = F)%>%
+  kable_styling(bootstrap_options = c("striped", "hover"), full_width = F)%>%
+  add_header_above(c(" " = 4, "Unadjusted" = 6, "Adjusted" = 7)) %>%
+  column_spec(11:17, background = "lightcyan") %>% 
+  footnote(general = "Adjusted by age, sex, PC's 1-10 and broad PCA ancestry")
+
+```
+
+###Ngati Porou Hauora  
+```{r, echo=FALSE, message=F, warning=FALSE, esacpe = FALSE, results='asis'}
+#creating a list with the names of the snps 
+snplistNPH<-c("RS370955937_down", "RS397514880_down", "RS756252214_down", "RS8187715_down")
+
+#creating the results data, col and row names
+resultstable2 <- (data.frame(matrix(nrow=length(snplistNPH), ncol=19)))
+names(resultstable2) <- c("SNP", "n", "genotypes", "alleles", "Beta", "SE", "OR", "LowerCI", "UpperCI", "P", "n.adj", "genotypes.adj", "alleles.adj","Beta.adj","SE.adj", "OR.adj", "LowerCI.adj", "UpperCI.adj", "P.adj")
+resultstable2[,1] <- snplistNPH
+
+#performing the logistical analysis, first on the unadjusted data and then adjusted data 
+for(snp in snplistNPH){  
+  resultstable2[resultstable2$SNP == snp,2:10]<-results(
+    test<-glm(as.numeric(DIABETES)~as.numeric(as.factor(mydataNPH[, snp])), family=binomial, data=mydataNPH),
+    genotypes<-table(na.omit(mydataNPH[, snp])),
+    s<-levels(factor(mydataNPH[, snp]))
+  )
+  resultstable2[resultstable2$SNP == snp,11:19]<-results(
+    test<-glm(as.numeric(DIABETES)~as.numeric(as.factor(mydataNPH[, snp]))+as.numeric(AGECOL)+as.factor(SEX)+as.numeric(GPANCESTRY), family=binomial, data=mydataNPH),
+    genotypes<-table(na.omit(mydataNPH[, snp])),
+    s<-levels(factor(mydataNPH[, snp]))
+  )
+}
+
+#editing the results table to show the actual alleles instead of 0, 1 and 2 
+resultstable2[1,"alleles"]="GG/GA/AA"
+resultstable2[2,"alleles"]="GG/GA/AA"
+resultstable2[3,"alleles"]="TT/TG/GG"
+resultstable2[4,"alleles"]="CC/CT/TT"
+#editing the results table to show Gene name and rs number 
+resultstable2[1,"SNP"]= "LIPE (rs370955937)"
+resultstable2[2,"SNP"]= "TSC1 (rs397514880)"
+resultstable2[3,"SNP"]= "WFS1 (rs756252214)"
+resultstable2[4,"SNP"]= "SLC22A3 (rs8187715)"
+
+#removing the genotypes.adj, alleles.adj and the down coding SNP colunm from the table
+resultstable2$genotypes.adj <- NULL
+resultstable2$alleles.adj <- NULL
+
+resultstable2%>%
+  mutate_at(vars(starts_with("P")), funs(format_p) ) %>% 
+  kable(.,"html", caption = "Type 2 diabetes association in Ngati Porou Hauora", escape = F) %>%
+  kable_styling(bootstrap_options = c("striped", "hover"), full_width = F)%>% 
+  add_header_above(c(" " = 4, "Unadjusted" = 6, "Adjusted" = 7)) %>%
+  column_spec(11:17, background = "lightcyan") %>% 
+  footnote(general = "Adjusted by age, sex, BMI and Grandparental ancestry")
+
+```
+
+#Type 2 Diabetes Meta Analyses
+These meta-analyses are comparing the logistic regression results of East, West and Ngati Porou Hauora cohorts. 
+
+```{r make T2D meta table, echo=FALSE, message=F, warning=FALSE, fig.width= 8}
+
+#making table of beta and standard error scores 
+metascoresD <- as.data.frame((matrix(nrow = 11, ncol = 4)))
+names(metascoresD) <- c("WP", "EP","ADP", "NPH")
+row.names(metascoresD) <- c("LIPEb","TSC1b", "WFS1b", "CREB3L2b","SLC22A3b","LIPEse","TSC1se","WFS1se","CREB3L2se", "SLC22A3se", "Study")
+#adding in the scores from each gout association test, WP, EP and NPH 
+metascoresD[1:5,1] <- resultstableWP2$Beta.adj
+metascoresD[1:5,2] <- resultstableEP2$Beta.adj
+metascoresD[1:5,3] <- resultstableADP$Beta.adj
+metascoresD[1:3,4] <- resultstable2$Beta.adj[1:3]
+metascoresD[5,4] <- resultstable2$Beta.adj[4]
+metascoresD[6:10,1] <- resultstableWP2$SE.adj
+metascoresD[6:10,2] <- resultstableEP2$SE.adj
+metascoresD[6:10,3] <- resultstableADP$SE.adj
+metascoresD[6:8,4] <- resultstable2$SE.adj[1:3]
+metascoresD[10,4] <- resultstable2$SE.adj[4]
+metascoresD[11,] <- c("WP", "EP", "ADP", "NPH")
+#transposing the table
+metascoresD <- as.data.frame(t(metascoresD))
+metascoresD$LIPEb <-  as.numeric(levels(metascoresD$LIPEb))[metascoresD$LIPEb]
+metascoresD$LIPEse <-  as.numeric(levels(metascoresD$LIPEse))[metascoresD$LIPEse]
+metascoresD$TSC1b <-  as.numeric(levels(metascoresD$TSC1b))[metascoresD$TSC1b]
+metascoresD$TSC1se <-  as.numeric(levels(metascoresD$TSC1se))[metascoresD$TSC1se]
+metascoresD$WFS1b <-  as.numeric(levels(metascoresD$WFS1b))[metascoresD$WFS1b]
+metascoresD$WFS1se <-  as.numeric(levels(metascoresD$WFS1se))[metascoresD$WFS1se]
+metascoresD$CREB3L2b <-  as.numeric(levels(metascoresD$CREB3L2b))[metascoresD$CREB3L2b]
+metascoresD$CREB3L2se <-  as.numeric(levels(metascoresD$CREB3L2se))[metascoresD$CREB3L2se]
+metascoresD$SLC22A3b <-  as.numeric(levels(metascoresD$SLC22A3b))[metascoresD$SLC22A3b]
+metascoresD$SLC22A3se <-  as.numeric(levels(metascoresD$SLC22A3se))[metascoresD$SLC22A3se]
+
+```
+
+###LIPE
+```{r, echo=FALSE, message=F, warning=FALSE, fig.width= 8}
+#LIPE T2D meta analysis 
+metaDLIPE <- metagen(TE = LIPEb, seTE = LIPEse, sm = "OR", studlab = Study, data = metascoresD)
+
+forest(metaDLIPE, comb.random = FALSE, print.Q=TRUE,print.pval.Q=TRUE,print.tau2=FALSE,print.I2=FALSE,hetlab="Heterogeneity: ",xlab="Odds Ratio",digits=3,text.fixed="Overall (95% CI)",smlab="LIPE and T2D meta analysis", test.overall = T, layout= "RevMan5")
+
+```
+
+###TSC1
+```{r, echo=FALSE, message=F, warning=FALSE, fig.width= 8}
+#TSC1 T2D meta analysis 
+metaDTSC1 <- metagen(TE = TSC1b, seTE = TSC1se, sm = "OR", studlab = Study, data = metascoresD)
+
+forest(metaDTSC1, comb.random = FALSE, print.Q=TRUE,print.pval.Q=TRUE,print.tau2=FALSE,print.I2=FALSE,hetlab="Heterogeneity: ", xlab="Odds Ratio",digits=3,text.fixed="Overall (95% CI)",smlab="TSC1 and T2D meta analysis", test.overall = T, layout = "RevMan5")
+
+```
+
+###WFS1
+```{r, echo=FALSE, message=F, warning=FALSE, fig.width= 8}
+#WFS1 T2D meta analysis 
+metaDWFS1 <- metagen(TE = WFS1b, seTE = WFS1se, sm = "OR", studlab = Study, data = metascoresD)
+
+forest(metaDWFS1, comb.random = FALSE, print.Q=TRUE,print.pval.Q=TRUE,print.tau2=FALSE,print.I2=FALSE,hetlab="Heterogeneity: ", xlab="Odds Ratio",digits=3,text.fixed="Overall (95% CI)",smlab="WFS1 and T2D meta analysis", test.overall = T, layout = "RevMan5")
+
+```
+
+###CREB3L2
+```{r, echo=FALSE, message=F, warning=FALSE, fig.width= 8}
+#CREB3L2 T2D meta analysis 
+metaDCREB3L2 <- metagen(TE = CREB3L2b, seTE = CREB3L2se, sm = "OR", studlab = Study, data = metascoresD)
+
+forest(metaDCREB3L2, comb.random = FALSE, print.Q=TRUE,print.pval.Q=TRUE,print.tau2=FALSE,print.I2=FALSE,hetlab="Heterogeneity: ", xlab="Odds Ratio",digits=3,text.fixed="Overall (95% CI)",smlab="CREB3L2 and T2D meta analysis", test.overall = T, layout = "RevMan5")
+
+```
+
+###SLC22A3
+```{r, echo=FALSE, message=F, warning=FALSE, fig.width= 8}
+#SLC22A3 T2D meta analysis 
+metaDSLC22A3 <- metagen(TE = SLC22A3b, seTE = SLC22A3se, sm = "OR", studlab = Study, data = metascoresD)
+
+forest(metaDSLC22A3, comb.random = FALSE, print.Q=TRUE,print.pval.Q=TRUE,print.tau2=FALSE,print.I2=FALSE,hetlab="Heterogeneity: ", xlab="Odds Ratio",digits=3,text.fixed="Overall (95% CI)",smlab="SLC22A3 and T2D meta analysis", test.overall = T, layout = "RevMan5")
+
+```
+
+#BMI linear regressions
+
+###Polynesian Wide 
+```{r, echo=FALSE, message=F, warning=FALSE, esacpe = FALSE}
+
+#assigning list of continuous variables 
+gfcols<-c("BMI")
+#assigning list of SNPs 
+snplist<-c("RS370955937_down", "RS397514880_down", "RS756252214_down", "RS777894272_down", "RS8187715_down")
+
+#creating results matrix
+resultmatrixPW<-as.data.frame(matrix(nrow=1, ncol=11))
+colnames(resultmatrixPW)<-c("test","n","estimate","std.error","statistic","p.value","n_adj","estimate_adj","std.error_adj","statistic_adj","p.value_adj")
+
+#performing unadjusted and adjusted linear regression and adding results to table
+for (snp in snplist){
+  for (c in gfcols){
+    resultmatrix<-as.data.frame(matrix(nrow = 1, ncol = 11))
+    colnames(resultmatrix)<-c("test","n","estimate","std.error","statistic","p.value","n_adj","estimate_adj","std.error_adj","statistic_adj","p.value_adj")
+    resultmatrix[,1] <-paste0(snp,c, collapse = "_")
+    test<-lm(as.numeric(polywide[,c])~as.numeric(polywide[,snp]), data = polywide)
+    resultmatrix[,2] <-sum(summary(test)[[7]][1:2])
+    resultmatrix[,3:5]<- round(broom::tidy(test)[2,2:4], digits = 3)
+    resultmatrix[,6]<- broom::tidy(test)[2,5]
+    
+    test2<-lm(as.numeric(polywide[,c])~as.numeric(polywide[,snp])+as.numeric(AGECOL)+as.factor(SEX)+PCA1+PCA2+PCA3+PCA4+PCA5+PCA6+PCA7+PCA8+PCA9+PCA10+as.numeric(PCAETHBROAD_down), data = polywide)
+    resultmatrix[,7] <-sum(summary(test2)[[7]][1:2])
+    resultmatrix[,8:10]<- round(broom::tidy(test2)[2,2:4], digits = 3)
+    resultmatrix[,11]<- broom::tidy(test2)[2,5]
+    resultmatrixPW<-rbind(resultmatrixPW, resultmatrix)
+    rm(resultmatrix)
+  }
+}
+
+#removing the row of 'NA' 
+resultmatrixPW <- resultmatrixPW[-c(1),]
+#renaming the variant ID's with gene and rs numbers 
+resultmatrixPW$test<-c("LIPE (rs370955937)", "TSC1 (rs397514880)", "WFS1 (rs756252214)", "CREB3L2 (rs777894272)", "SLC22A3 (rs8187715)")
+
+#editing table format
+#data matrix pipped into mutate function to highlight significant p-values and change their format if very small
+#pipped into kable settings to make pretty 
+resultmatrixPW%>%
+  mutate_at(vars(starts_with("p.value")), funs(purrr::map_chr(., ~ifelse(.x < 0.05, format_p_ke(.x, bold = TRUE, format = 'html'), format_p_ke(.x, bold = FALSE, format = 'html')) )) ) %>% 
+  kable(., caption="Linear regression of BMI in Polynesian Wide", format = "html", escape = F)%>%
+  kable_styling(bootstrap_options = c("striped", "hover"), full_width = T)%>%
+  add_header_above(c( " "= 1, "unadjusted" = 5,"adjusted"=5)) %>% 
+  column_spec(7:11, background = "lavenderblush") %>% 
+  footnote(general = "Covariates in the adjusted model are age, sex, PCs 1-10 and broad PCA ancestry")
+
+```
+
+###West Polynesian 
+```{r, echo=FALSE, message=F, warning=FALSE}
+
+#creating results matrix
+resultmatrixWP<-as.data.frame(matrix(nrow=1, ncol=11))
+colnames(resultmatrixWP)<-c("test","n","estimate","std.error","statistic","p.value","n_adj","estimate_adj","std.error_adj","statistic_adj","p.value_adj")
+
+#performing unadjusted and adjusted linear regression and adding results to table
+for (snp in snplist){
+  for (c in gfcols){
+    resultmatrix<-as.data.frame(matrix(nrow = 1, ncol = 11))
+    colnames(resultmatrix)<-c("test","n","estimate","std.error","statistic","p.value","n_adj","estimate_adj","std.error_adj","statistic_adj","p.value_adj")
+    resultmatrix[,1] <-paste0(snp,c, collapse = "_")
+    test<-lm(as.numeric(westpoly[,c])~as.numeric(westpoly[,snp]), data = westpoly)
+    resultmatrix[,2] <-sum(summary(test)[[7]][1:2])
+    resultmatrix[,3:5]<- round(broom::tidy(test)[2,2:4], digits = 3)
+    resultmatrix[,6]<- broom::tidy(test)[2,5]
+    
+    test2<-lm(as.numeric(westpoly[,c])~as.numeric(westpoly[,snp])+as.numeric(AGECOL)+as.factor(SEX)+PCA1+PCA2+PCA3+PCA4+PCA5+PCA6+PCA7+PCA8+PCA9+PCA10+as.numeric(PCAETHBROAD_down), data = westpoly)
+    resultmatrix[,7] <-sum(summary(test2)[[7]][1:2])
+    resultmatrix[,8:10]<- round(broom::tidy(test2)[2,2:4], digits = 3)
+    resultmatrix[,11]<- broom::tidy(test2)[2,5]
+    resultmatrixWP<-rbind(resultmatrixWP, resultmatrix)
+    rm(resultmatrix)
+  }
+}
+
+#removing the row of 'NA' 
+resultmatrixWP <- resultmatrixWP[-c(1),]
+#renaming the variant ID's with gene and rs numbers 
+resultmatrixWP$test<-c("LIPE (rs370955937)", "TSC1 (rs397514880)", "WFS1 (rs756252214)", "CREB3L2 (rs777894272)", "SLC22A3 (rs8187715)")
+
+#editing table format
+#data matrix pipped into mutate function to highlight significant p-values and change their format if very small
+#pipped into kable settings to make pretty 
+resultmatrixWP%>%
+  mutate_at(vars(starts_with("p.value")), funs(purrr::map_chr(., ~ifelse(.x < 0.05, format_p_ke(.x, bold = TRUE, format = 'html'), format_p_ke(.x, bold = FALSE, format = 'html')) )) ) %>% 
+  kable(., caption="Linear regression of BMI in West Polynesian ", format = "html", escape = F)%>%
+  kable_styling(bootstrap_options = c("striped", "hover"), full_width = T)%>%
+  add_header_above(c( " "= 1, "unadjusted" = 5,"adjusted"=5)) %>% 
+  column_spec(7:11, background = "lavenderblush") %>% 
+  footnote(general = "Covariates in the adjusted model are age, sex, PCs 1-10 and broad PCA ancestry")
+
+
+```
+
+###East Polynesian 
+```{r, echo=FALSE, message=F, warning=FALSE}
+
+#creating results matrix
+resultmatrixEP<-as.data.frame(matrix(nrow=1, ncol=11))
+colnames(resultmatrixEP)<-c("test","n","estimate","std.error","statistic","p.value","n_adj","estimate_adj","std.error_adj","statistic_adj","p.value_adj")
+
+#performing unadjusted and adjusted linear regression and adding results to table
+for (snp in snplist){
+  for (c in gfcols){
+    resultmatrix<-as.data.frame(matrix(nrow = 1, ncol = 11))
+    colnames(resultmatrix)<-c("test","n","estimate","std.error","statistic","p.value","n_adj","estimate_adj","std.error_adj","statistic_adj","p.value_adj")
+    resultmatrix[,1] <-paste0(snp,c, collapse = "_")
+    test<-lm(as.numeric(eastpoly[,c])~as.numeric(eastpoly[,snp]), data = eastpoly)
+    resultmatrix[,2] <-sum(summary(test)[[7]][1:2])
+    resultmatrix[,3:5]<- round(broom::tidy(test)[2,2:4], digits = 3)
+    resultmatrix[,6]<- broom::tidy(test)[2,5]
+    
+    test2<-lm(as.numeric(eastpoly[,c])~as.numeric(eastpoly[,snp])+as.numeric(AGECOL)+as.factor(SEX)+PCA1+PCA2+PCA3+PCA4+PCA5+PCA6+PCA7+PCA8+PCA9+PCA10+as.numeric(PCAETHBROAD_down), data = eastpoly)
+    resultmatrix[,7] <-sum(summary(test2)[[7]][1:2])
+    resultmatrix[,8:10]<- round(broom::tidy(test2)[2,2:4], digits = 3)
+    resultmatrix[,11]<- broom::tidy(test2)[2,5]
+    resultmatrixEP<-rbind(resultmatrixEP, resultmatrix)
+    rm(resultmatrix)
+  }
+}
+
+#removing the row of 'NA' 
+resultmatrixEP <- resultmatrixEP[-c(1),]
+#renaming the variant ID's with gene and rs numbers 
+resultmatrixEP$test<-c("LIPE (rs370955937)", "TSC1 (rs397514880)", "WFS1 (rs756252214)", "CREB3L2 (rs777894272)", "SLC22A3 (rs8187715)")
+
+#editing table format
+#data matrix pipped into mutate function to highlight significant p-values and change their format if very small
+#pipped into kable settings to make pretty 
+resultmatrixEP%>%
+  mutate_at(vars(starts_with("p.value")), funs(purrr::map_chr(., ~ifelse(.x < 0.05, format_p_ke(.x, bold = TRUE, format = 'html'), format_p_ke(.x, bold = FALSE, format = 'html')) )) ) %>% 
+  kable(., caption="Linear regression of BMI in East Polynesian", format = "html", escape = F)%>%
+  kable_styling(bootstrap_options = c("striped", "hover"), full_width = T)%>%
+  add_header_above(c( " "= 1, "unadjusted" = 5,"adjusted"=5)) %>% 
+  column_spec(7:11, background = "lavenderblush") %>% 
+  footnote(general = "Covariates in the adjusted model are age, sex, PCs 1-10 and broad PCA anestry")
+
+```
+
+###Admixed Polynesian 
+```{r, echo=FALSE, message=F, warning=FALSE}
+
+#creating results matrix
+resultmatrixADP<-as.data.frame(matrix(nrow=1, ncol=11))
+colnames(resultmatrixADP)<-c("test","n","estimate","std.error","statistic","p.value","n_adj","estimate_adj","std.error_adj","statistic_adj","p.value_adj")
+
+#performing unadjusted and adjusted linear regression and adding results to table
+for (snp in snplist){
+  for (c in gfcols){
+    resultmatrix<-as.data.frame(matrix(nrow = 1, ncol = 11))
+    colnames(resultmatrix)<-c("test","n","estimate","std.error","statistic","p.value","n_adj","estimate_adj","std.error_adj","statistic_adj","p.value_adj")
+    resultmatrix[,1] <-paste0(snp,c, collapse = "_")
+    test<-lm(as.numeric(adpoly[,c])~as.numeric(adpoly[,snp]), data = adpoly)
+    resultmatrix[,2] <-sum(summary(test)[[7]][1:2])
+    resultmatrix[,3:5]<- round(broom::tidy(test)[2,2:4], digits = 3)
+    resultmatrix[,6]<- broom::tidy(test)[2,5]
+    
+    test2<-lm(as.numeric(adpoly[,c])~as.numeric(adpoly[,snp])+as.numeric(AGECOL)+as.factor(SEX)+PCA1+PCA2+PCA3+PCA4+PCA5+PCA6+PCA7+PCA8+PCA9+PCA10+as.numeric(PCAETHBROAD_down), data = adpoly)
+    resultmatrix[,7] <-sum(summary(test2)[[7]][1:2])
+    resultmatrix[,8:10]<- round(broom::tidy(test2)[2,2:4], digits = 3)
+    resultmatrix[,11]<- broom::tidy(test2)[2,5]
+    resultmatrixADP<-rbind(resultmatrixADP, resultmatrix)
+    rm(resultmatrix)
+  }
+}
+
+#removing the row of 'NA' 
+resultmatrixADP <- resultmatrixADP[-c(1),]
+#renaming the variant ID's with gene and rs numbers 
+resultmatrixADP$test<-c("LIPE (rs370955937)", "TSC1 (rs397514880)", "WFS1 (rs756252214)", "CREB3L2 (rs777894272)", "SLC22A3 (rs8187715)")
+
+#editing table format
+#data matrix pipped into mutate function to highlight significant p-values and change their format if very small
+#pipped into kable settings to make pretty 
+resultmatrixADP%>%
+  mutate_at(vars(starts_with("p.value")), funs(purrr::map_chr(., ~ifelse(.x < 0.05, format_p_ke(.x, bold = TRUE, format = 'html'), format_p_ke(.x, bold = FALSE, format = 'html')) )) ) %>% 
+  kable(., caption="Linear regression of BMI in Admixed Polynesian", format = "html", escape = F)%>%
+  kable_styling(bootstrap_options = c("striped", "hover"), full_width = T)%>%
+  add_header_above(c( " "= 1, "unadjusted" = 5,"adjusted"=5)) %>% 
+  column_spec(7:11, background = "lavenderblush") %>% 
+  footnote(general = "Covariates in the adjusted model are age, sex, PCs 1-10 and broad PCA anestry")
+
+```
+
+###Ngati Porou 
+```{r, echo=FALSE, message=F, warning=FALSE}
+
+#creating results matrix
+resultmatrixNPH<-as.data.frame(matrix(nrow=1, ncol=11))
+colnames(resultmatrixNPH)<-c("test","n","estimate","std.error","statistic","p.value","n_adj","estimate_adj","std.error_adj","statistic_adj","p.value_adj")
+
+#performing unadjusted and adjusted linear regression and adding results to table
+for (snp in snplistNPH){
+  for (c in gfcols){
+    resultmatrix<-as.data.frame(matrix(nrow = 1, ncol = 11))
+    colnames(resultmatrix)<-c("test","n","estimate","std.error","statistic","p.value","n_adj","estimate_adj","std.error_adj","statistic_adj","p.value_adj")
+    resultmatrix[,1] <-paste0(snp,c, collapse = "_")
+    test<-lm(as.numeric(mydataNPH[,c])~as.numeric(mydataNPH[,snp]), data = mydataNPH)
+    resultmatrix[,2] <-sum(summary(test)[[7]][1:2])
+    resultmatrix[,3:5]<- round(broom::tidy(test)[2,2:4], digits = 3)
+    resultmatrix[,6]<- broom::tidy(test)[2,5]
+    
+    test2<-lm(as.numeric(mydataNPH[,c])~as.numeric(mydataNPH[,snp])+as.numeric(AGECOL)+as.factor(SEX)+as.numeric(GPANCESTRY), data = mydataNPH)
+    resultmatrix[,7] <-sum(summary(test2)[[7]][1:2])
+    resultmatrix[,8:10]<- round(broom::tidy(test2)[2,2:4], digits = 3)
+    resultmatrix[,11]<- broom::tidy(test2)[2,5]
+    resultmatrixNPH<-rbind(resultmatrixNPH, resultmatrix)
+    rm(resultmatrix)
+  }
+}
+
+#removing the row of 'NA' 
+resultmatrixNPH <- resultmatrixNPH[-c(1),]
+#renaming the variant ID's with gene and rs numbers 
+resultmatrixNPH$test<-c("LIPE (rs370955937)", "TSC1 (rs397514880)", "WFS1 (rs756252214)", "SLC22A3 (rs8187715)")
+
+#editing table format
+#data matrix pipped into mutate function to highlight significant p-values and change their format if very small
+#pipped into kable settings to make pretty 
+resultmatrixNPH%>%
+  mutate_at(vars(starts_with("p.value")), funs(purrr::map_chr(., ~ifelse(.x < 0.05, format_p_ke(.x, bold = TRUE, format = 'html'), format_p_ke(.x, bold = FALSE, format = 'html')) )) ) %>% 
+  kable(., caption="Linear regression of BMI in Ngati Porou Hauora ", format = "html", escape = F)%>%
+  kable_styling(bootstrap_options = c("striped", "hover"), full_width = T)%>%
+  add_header_above(c( " "= 1, "unadjusted" = 5,"adjusted"=5)) %>% 
+  column_spec(7:11, background = "lavenderblush") %>% 
+  footnote(general = "Covariates in the adjusted model are age, sex and GPancestry")
+
+```
+
+
+# BMI Meta Analyses
+These meta-analyses are comparing the logistic regression results of East, West and Ngati Porou Hauora cohorts. 
+
+```{r making BMI meta table, echo=FALSE, message=F, warning=FALSE, fig.width= 8}
+
+#making table of beta and standard error scores 
+metascoresBMI <- as.data.frame((matrix(nrow = 11, ncol = 4)))
+names(metascoresBMI) <- c("WP", "EP", "ADP", "NPH")
+row.names(metascoresBMI) <- c("LIPEb","TSC1b", "WFS1b", "CREB3L2b","SLC22A3b","LIPEse","TSC1se","WFS1se","CREB3L2se", "SLC22A3se", "Study")
+#adding in the scores from each gout association test, WP, EP and NPH 
+metascoresBMI[1:5,1] <- resultmatrixWP$estimate_adj[2:6]
+metascoresBMI[1:5,2] <- resultmatrixEP$estimate_adj[2:6]
+metascoresBMI[1:5,3] <- resultmatrixADP$estimate_adj[2:6]
+metascoresBMI[1:3,4] <- resultmatrixNPH$estimate_adj[2:4]
+metascoresBMI[5,4] <- resultmatrixNPH$estimate_adj[5]
+metascoresBMI[6:10,1] <- resultmatrixWP$std.error_adj[2:6]
+metascoresBMI[6:10,2] <- resultmatrixEP$std.error_adj[2:6]
+metascoresBMI[6:10,3] <- resultmatrixADP$std.error_adj[2:6]
+metascoresBMI[6:8,4] <- resultmatrixNPH$std.error_adj[2:4]
+metascoresBMI[10,4] <- resultmatrixNPH$std.error_adj[5]
+metascoresBMI[11,] <- c("WP", "EP", "ADP", "NPH")
+#transposing the table
+metascoresBMI <- as.data.frame(t(metascoresBMI))
+metascoresBMI$LIPEb <-  as.numeric(levels(metascoresBMI$LIPEb))[metascoresBMI$LIPEb]
+metascoresBMI$LIPEse <-  as.numeric(levels(metascoresBMI$LIPEse))[metascoresBMI$LIPEse]
+metascoresBMI$TSC1b <-  as.numeric(levels(metascoresBMI$TSC1b))[metascoresBMI$TSC1b]
+metascoresBMI$TSC1se <-  as.numeric(levels(metascoresBMI$TSC1se))[metascoresBMI$TSC1se]
+metascoresBMI$WFS1b <-  as.numeric(levels(metascoresBMI$WFS1b))[metascoresBMI$WFS1b]
+metascoresBMI$WFS1se <-  as.numeric(levels(metascoresBMI$WFS1se))[metascoresBMI$WFS1se]
+metascoresBMI$CREB3L2b <-  as.numeric(levels(metascoresBMI$CREB3L2b))[metascoresBMI$CREB3L2b]
+metascoresBMI$CREB3L2se <-  as.numeric(levels(metascoresBMI$CREB3L2se))[metascoresBMI$CREB3L2se]
+metascoresBMI$SLC22A3b <-  as.numeric(levels(metascoresBMI$SLC22A3b))[metascoresBMI$SLC22A3b]
+metascoresBMI$SLC22A3se <-  as.numeric(levels(metascoresBMI$SLC22A3se))[metascoresBMI$SLC22A3se]
+
+```
+
+###LIPE
+```{r, echo=FALSE, message=F, warning=FALSE, fig.width= 8}
+
+#LIPE T2D meta analysis 
+metaBMILIPE <- metagen(TE = LIPEb, seTE = LIPEse, studlab = Study, data = metascoresBMI)
+
+forest(metaBMILIPE, comb.random = FALSE, print.Q=TRUE,print.pval.Q=TRUE,print.tau2=FALSE,print.I2=FALSE,hetlab="Heterogeneity: ",digits=3,text.fixed="Overall (95% CI)",smlab="LIPE and BMI meta analysis", test.overall = T, layout = "RevMan5")
+
+```
+
+###TSC1
+```{r, echo=FALSE, message=F, warning=FALSE, fig.width= 8}
+#TSC1 T2D meta analysis 
+metaBMITSC1 <- metagen(TE = TSC1b, seTE = TSC1se, studlab = Study, data = metascoresBMI)
+
+forest(metaBMITSC1, comb.random = FALSE, print.Q=TRUE,print.pval.Q=TRUE,print.tau2=FALSE,print.I2=FALSE,hetlab="Heterogeneity: ",digits=3,text.fixed="Overall (95% CI)",smlab="TSC1 and BMI meta analysis", test.overall = T, layout = "RevMan5")
+
+```
+
+###WFS1
+```{r, echo=FALSE, message=F, warning=FALSE, fig.width= 8}
+
+#WFS1 T2D meta analysis 
+metaBMIWFS1 <- metagen(TE = WFS1b, seTE = WFS1se, studlab = Study, data = metascoresBMI)
+
+forest(metaBMIWFS1, comb.random = FALSE, print.Q=TRUE,print.pval.Q=TRUE,print.tau2=FALSE,print.I2=FALSE,hetlab="Heterogeneity: ",digits=3,text.fixed="Overall (95% CI)",smlab="WFS1 and BMI meta analysis", test.overall = T, layout = "RevMan5")
+```
+
+###CREB3L2
+```{r, echo=FALSE, message=F, warning=FALSE, fig.width= 8}
+#CREB3L2 T2D meta analysis 
+metaBMICREB3L2 <- metagen(TE = CREB3L2b, seTE = CREB3L2se, studlab = Study, data = metascoresBMI)
+
+forest(metaBMICREB3L2, comb.random = FALSE, print.Q=TRUE,print.pval.Q=TRUE,print.tau2=FALSE,print.I2=FALSE,hetlab="Heterogeneity: ",digits=3,text.fixed="Overall (95% CI)",smlab="CREB3L2 and BMI meta analysis", test.overall = T, layout = "RevMan5")
+
+```
+
+###SLC22A3 
+```{r, echo=FALSE, message=F, warning=FALSE, fig.width= 8}
+
+#SLC22A3 T2D meta analysis 
+metaBMISLC22A3 <- metagen(TE = SLC22A3b, seTE = SLC22A3se, studlab = Study, data = metascoresBMI)
+
+forest(metaBMISLC22A3, comb.random = FALSE, print.Q=TRUE,print.pval.Q=TRUE,print.tau2=FALSE,print.I2=FALSE,hetlab="Heterogeneity: ",digits=3,text.fixed="Overall (95% CI)",smlab="SLC22A3 and BMI meta analysis", test.overall = T, layout = "RevMan5")
+```
+
+#LIPE assocations with BMI related phenotypes 
+
+```{r Polynesian wide BMIrP, echo=FALSE, message=F, warning=FALSE, esacpe = FALSE, results='asis'}
+
+#linear regression with triglycerides, LDL, waist and height 
+LIPE <- c("RS370955937_down")
+BMIrPheno <- c("TRIGLY", "LDL", "HEIGHT", "WAIST")
+#creating results matrix
+triPWtab<-as.data.frame(matrix(nrow=1, ncol=11))
+colnames(triPWtab)<-c("Phenotype","n","estimate","std.error","statistic","p.value","n_adj","estimate_adj","std.error_adj","statistic_adj","p.value_adj")
+
+#performing unadjusted and adjusted linear regression and adding results to table
+for (snp in LIPE){
+  for (c in BMIrPheno){
+    resultmatrix<-as.data.frame(matrix(nrow = 1, ncol = 11))
+    colnames(resultmatrix)<-c("Phenotype","n","estimate","std.error","statistic","p.value","n_adj","estimate_adj","std.error_adj","statistic_adj","p.value_adj")
+    resultmatrix[,1] <-paste0(snp,c, collapse = "_")
+    test<-lm(as.numeric(polywide[,c])~as.numeric(polywide[,snp]), data = polywide)
+    resultmatrix[,2] <-sum(summary(test)[[7]][1:2])
+    resultmatrix[,3:5]<- round(broom::tidy(test)[2,2:4], digits = 3)
+    resultmatrix[,6]<- broom::tidy(test)[2,5]
+    
+    test2<-lm(as.numeric(polywide[,c])~as.numeric(polywide[,snp])+as.numeric(AGECOL)+as.factor(SEX)+PCA1+PCA2+PCA3+PCA4+PCA5+PCA6+PCA7+PCA8+PCA9+PCA10+as.numeric(PCAETHBROAD_down), data = polywide)
+    resultmatrix[,7] <-sum(summary(test2)[[7]][1:2])
+    resultmatrix[,8:10]<- round(broom::tidy(test2)[2,2:4], digits = 3)
+    resultmatrix[,11]<- broom::tidy(test2)[2,5]
+    triPWtab<-rbind(triPWtab, resultmatrix)
+    rm(resultmatrix)
+  }
+}
+
+#renaming the variant ID's with gene and rs numbers 
+triPWtab$Phenotype<-c("","Triglycerides", "LDL", "Height", "Waist")
+
+```
+
+```{r West Polynesian BMIrP, echo=FALSE, message=F, warning=FALSE, esacpe = FALSE, results='asis'}
+#creating results matrix
+triWPtab<-as.data.frame(matrix(nrow=1, ncol=11))
+colnames(triWPtab)<-c("Phenotype","n","estimate","std.error","statistic","p.value","n_adj","estimate_adj","std.error_adj","statistic_adj","p.value_adj")
+
+#performing unadjusted and adjusted linear regression and adding results to table
+for (snp in LIPE){
+  for (c in BMIrPheno){
+    resultmatrix<-as.data.frame(matrix(nrow = 1, ncol = 11))
+    colnames(resultmatrix)<-c("Phenotype","n","estimate","std.error","statistic","p.value","n_adj","estimate_adj","std.error_adj","statistic_adj","p.value_adj")
+    resultmatrix[,1] <-paste0(snp,c, collapse = "_")
+    test<-lm(as.numeric(westpoly[,c])~as.numeric(westpoly[,snp]), data = westpoly)
+    resultmatrix[,2] <-sum(summary(test)[[7]][1:2])
+    resultmatrix[,3:5]<- round(broom::tidy(test)[2,2:4], digits = 3)
+    resultmatrix[,6]<- broom::tidy(test)[2,5]
+    
+    test2<-lm(as.numeric(westpoly[,c])~as.numeric(westpoly[,snp])+as.numeric(AGECOL)+as.factor(SEX)+PCA1+PCA2+PCA3+PCA4+PCA5+PCA6+PCA7+PCA8+PCA9+PCA10+as.numeric(PCAETHBROAD_down), data = westpoly)
+    resultmatrix[,7] <-sum(summary(test2)[[7]][1:2])
+    resultmatrix[,8:10]<- round(broom::tidy(test2)[2,2:4], digits = 3)
+    resultmatrix[,11]<- broom::tidy(test2)[2,5]
+    triWPtab<-rbind(triWPtab, resultmatrix)
+    rm(resultmatrix)
+  }
+}
+
+#renaming the variant ID's with gene and rs numbers 
+triWPtab$Phenotype<-c("","Triglycerides", "LDL", "Height","Waist")
+
+```
+
+```{r East Polynesian BMIrP, echo=FALSE, message=F, warning=FALSE, esacpe = FALSE, results='asis'}
+#creating results matrix
+triEPtab<-as.data.frame(matrix(nrow=1, ncol=11))
+colnames(triEPtab)<-c("Phenotype","n","estimate","std.error","statistic","p.value","n_adj","estimate_adj","std.error_adj","statistic_adj","p.value_adj")
+
+#performing unadjusted and adjusted linear regression and adding results to table
+for (snp in LIPE){
+  for (c in BMIrPheno){
+    resultmatrix<-as.data.frame(matrix(nrow = 1, ncol = 11))
+    colnames(resultmatrix)<-c("Phenotype","n","estimate","std.error","statistic","p.value","n_adj","estimate_adj","std.error_adj","statistic_adj","p.value_adj")
+    resultmatrix[,1] <-paste0(snp,c, collapse = "_")
+    test<-lm(as.numeric(eastpoly[,c])~as.numeric(eastpoly[,snp]), data = eastpoly)
+    resultmatrix[,2] <-sum(summary(test)[[7]][1:2])
+    resultmatrix[,3:5]<- round(broom::tidy(test)[2,2:4], digits = 3)
+    resultmatrix[,6]<- broom::tidy(test)[2,5]
+    
+    test2<-lm(as.numeric(eastpoly[,c])~as.numeric(eastpoly[,snp])+as.numeric(AGECOL)+as.factor(SEX)+PCA1+PCA2+PCA3+PCA4+PCA5+PCA6+PCA7+PCA8+PCA9+PCA10+as.numeric(PCAETHBROAD_down), data = eastpoly)
+    resultmatrix[,7] <-sum(summary(test2)[[7]][1:2])
+    resultmatrix[,8:10]<- round(broom::tidy(test2)[2,2:4], digits = 3)
+    resultmatrix[,11]<- broom::tidy(test2)[2,5]
+    triEPtab<-rbind(triEPtab, resultmatrix)
+    rm(resultmatrix)
+  }
+}
+
+#renaming the variant ID's with gene and rs numbers 
+triEPtab$Phenotype<-c("","Triglycerides", "LDL", "Height","Waist")
+
+```
+
+```{r Admixted Polynesian BMIrP, echo=FALSE, message=F, warning=FALSE, esacpe = FALSE, results='asis'}
+#creating results matrix
+triADPtab<-as.data.frame(matrix(nrow=1, ncol=11))
+colnames(triADPtab)<-c("Phenotype","n","estimate","std.error","statistic","p.value","n_adj","estimate_adj","std.error_adj","statistic_adj","p.value_adj")
+
+#performing unadjusted and adjusted linear regression and adding results to table
+for (snp in LIPE){
+  for (c in BMIrPheno){
+    resultmatrix<-as.data.frame(matrix(nrow = 1, ncol = 11))
+    colnames(resultmatrix)<-c("Phenotype","n","estimate","std.error","statistic","p.value","n_adj","estimate_adj","std.error_adj","statistic_adj","p.value_adj")
+    resultmatrix[,1] <-paste0(snp,c, collapse = "_")
+    test<-lm(as.numeric(adpoly[,c])~as.numeric(adpoly[,snp]), data = adpoly)
+    resultmatrix[,2] <-sum(summary(test)[[7]][1:2])
+    resultmatrix[,3:5]<- round(broom::tidy(test)[2,2:4], digits = 3)
+    resultmatrix[,6]<- broom::tidy(test)[2,5]
+    
+    test2<-lm(as.numeric(adpoly[,c])~as.numeric(adpoly[,snp])+as.numeric(AGECOL)+as.factor(SEX)+PCA1+PCA2+PCA3+PCA4+PCA5+PCA6+PCA7+PCA8+PCA9+PCA10+as.numeric(PCAETHBROAD_down), data = adpoly)
+    resultmatrix[,7] <-sum(summary(test2)[[7]][1:2])
+    resultmatrix[,8:10]<- round(broom::tidy(test2)[2,2:4], digits = 3)
+    resultmatrix[,11]<- broom::tidy(test2)[2,5]
+    triADPtab<-rbind(triADPtab, resultmatrix)
+    rm(resultmatrix)
+  }
+}
+
+#renaming the variant ID's with gene and rs numbers 
+triADPtab$Phenotype<-c("","Triglycerides", "LDL", "Height","Waist")
+
+```
+
+```{r Ngati Porou BMIrP, echo=FALSE, message=F, warning=FALSE, esacpe = FALSE, results='asis'}
+#creating results matrix
+triNPHtab<-as.data.frame(matrix(nrow=1, ncol=11))
+colnames(triNPHtab)<-c("Phenotype","n","estimate","std.error","statistic","p.value","n_adj","estimate_adj","std.error_adj","statistic_adj","p.value_adj")
+
+#performing unadjusted and adjusted linear regression and adding results to table
+for (snp in LIPE){
+  for (c in BMIrPheno){
+    resultmatrix<-as.data.frame(matrix(nrow = 1, ncol = 11))
+    colnames(resultmatrix)<-c("Phenotype","n","estimate","std.error","statistic","p.value","n_adj","estimate_adj","std.error_adj","statistic_adj","p.value_adj")
+    resultmatrix[,1] <-paste0(snp,c, collapse = "_")
+    test<-lm(as.numeric(mydataNPH[,c])~as.numeric(mydataNPH[,snp]), data = mydataNPH)
+    resultmatrix[,2] <-sum(summary(test)[[7]][1:2])
+    resultmatrix[,3:5]<- round(broom::tidy(test)[2,2:4], digits = 3)
+    resultmatrix[,6]<- broom::tidy(test)[2,5]
+    
+    test2<-lm(as.numeric(mydataNPH[,c])~as.numeric(mydataNPH[,snp])+as.numeric(AGECOL)+as.factor(SEX)+PCA1+PCA2+PCA3+PCA4+PCA5+PCA6+PCA7+PCA8+PCA9+PCA10+as.numeric(PCAETHBROAD_down), data = mydataNPH)
+    resultmatrix[,7] <-sum(summary(test2)[[7]][1:2])
+    resultmatrix[,8:10]<- round(broom::tidy(test2)[2,2:4], digits = 3)
+    resultmatrix[,11]<- broom::tidy(test2)[2,5]
+    triNPHtab<-rbind(triNPHtab, resultmatrix)
+    rm(resultmatrix)
+  }
+}
+
+#renaming the variant ID's with gene and rs numbers 
+triNPHtab$Phenotype<-c("","Triglycerides", "LDL", "Height","Waist")
+
+```
+
+```{r res tab BMIrP, echo=FALSE, message=F, warning=FALSE, esacpe = FALSE, results='asis'}
+#combining results in nice table 
+
+BMIrPhenotab <- rbind.data.frame(triPWtab, triWPtab, triEPtab, triADPtab, triNPHtab)
+
+BMIrPhenotab%>%
+  mutate_at(vars(starts_with("p.value")), funs(purrr::map_chr(., ~ifelse(.x < 0.05, format_p_ke(.x, bold = TRUE, format = 'html'), format_p_ke(.x, bold = FALSE, format = 'html')) )) ) %>% 
+  kable(., caption="Linear regression of BMI related phenotypes", format = "html", escape = F)%>%
+  kable_styling(bootstrap_options = c("striped", "hover"), full_width = F)%>%
+  add_header_above(c( " "= 1, "unadjusted" = 5,"adjusted"=5)) %>% 
+  column_spec(6, border_right = T) %>% 
+  column_spec(1, bold = T) %>% 
+  group_rows(index = c("Polynesian wide" = 5 , "West Polynesian" = 5 , "East Polynesian" = 5 , "Admixed Polynesian" = 5 , "Ngati Porou Hauora" = 5)) %>% 
+  footnote(general = "Covariates in the adjusted model are age, sex, PCs 1-10 and broad PCA ancestry")
+
+```
+
+# LIPE and Waist Meta-analysis 
+```{r, echo=FALSE, message=F, warning=FALSE, fig.width= 8}
+
+#making table of beta and standard error scores 
+metawaist <- as.data.frame((matrix(nrow = 3, ncol = 4)))
+names(metawaist) <- c("WP", "EP","ADPoly" ,"NPH")
+row.names(metawaist) <- c("LIPEb","LIPEse","Study")
+#adding in the scores from each gout association test, WP, EP and NPH 
+
+metawaist[1,1] <- triWPtab[5,8]
+metawaist[1,2] <- triEPtab[5,8]
+metawaist[1,3] <- triADPtab[5,8]
+metawaist[1,4] <- triNPHtab[5,8]
+metawaist[2,1] <- triWPtab[5,9]
+metawaist[2,2] <- triEPtab[5,9]
+metawaist[2,3] <- triADPtab[5,9]
+metawaist[2,4] <- triNPHtab[5,9]
+metawaist[3,] <- c("WP", "EP","ADPoly" ,"NPH")
+
+#transposing the table
+metawaist <- as.data.frame(t(metawaist))
+metawaist$LIPEb <-  as.numeric(levels(metawaist$LIPEb))[metawaist$LIPEb]
+metawaist$LIPEse <-  as.numeric(levels(metawaist$LIPEse))[metawaist$LIPEse]
+
+#LIPE meta analysis 
+metawaisttest <- metagen(TE = LIPEb, seTE = LIPEse, studlab = Study, data = metawaist)
+
+forest(metawaisttest, comb.random = FALSE, print.Q=TRUE,print.pval.Q=TRUE,print.tau2=FALSE,print.I2=FALSE,hetlab="Heterogeneity: ",digits=3,text.fixed="Overall (95% CI)",smlab="LIPE and Waist meta analysis", test.overall = T, layout = "RevMan5")
+```
+
+#Logistic regression of LIPE and SLC22A3 with Gout 
+
+```{r Polynesian Wide Cohort G, echo=FALSE, message=F, warning=FALSE, esacpe = FALSE, results='asis'}
+
+###Gout association test 
+#creating a list with the names of the snps 
+snplistG<-c("RS370955937_down", "RS8187715_down")
+
+#creating the results data, col and row names
+resultstablePW <- (data.frame(matrix(nrow=length(snplistG), ncol=19)))
+names(resultstablePW) <- c("SNP", "n", "genotypes", "alleles", "Beta", "SE", "OR", "LowerCI", "UpperCI", "P", "n.adj", "genotypes.adj", "alleles.adj","Beta.adj","SE.adj", "OR.adj", "LowerCI.adj", "UpperCI.adj", "P.adj")
+resultstablePW[,1] <- snplistG
+
+#performing the logistical analysis, first on the unadjusted data and then adjusted data 
+for(snp in snplistG){  
+  resultstablePW[resultstablePW$SNP == snp,2:10]<-results(
+    test<-glm(as.numeric(GPGOUTAFFSTAT)~as.numeric(as.factor(polywide[, snp])), family=binomial, data=polywide),
+    genotypes<-table(na.omit(polywide[, snp])),
+    s<-levels(factor(polywide[, snp]))
+  )
+  resultstablePW[resultstablePW$SNP == snp,11:19]<-results(
+    test<-glm(as.numeric(GPGOUTAFFSTAT)~as.numeric(as.factor(polywide[, snp]))+as.numeric(AGECOL)+as.factor(SEX)+PCA1+PCA2+PCA3+PCA4+PCA5+PCA6+PCA7+PCA8+PCA9+ PCA10+as.numeric(PCAETHBROAD_down), family=binomial, data=polywide),
+    genotypes<-table(na.omit(polywide[, snp])),
+    s<-levels(factor(polywide[, snp]))
+  )
+}
+
+#editing the results table to show the actual alleles instead of 0, 1 and 2 
+resultstablePW[1,"alleles"]="GG/GA/AA"
+resultstablePW[2,"alleles"]="CC/CT/TT"
+#editing the results table to show Gene name and rs number 
+resultstablePW[1,"SNP"]= "LIPE (rs370955937)"
+resultstablePW[2,"SNP"]= "SLC22A3 (rs8187715)"
+
+#removing the genotypes.adj, alleles.adj and the down coding SNP colunm from the table
+resultstablePW$genotypes.adj <- NULL
+resultstablePW$alleles.adj <- NULL
+
+#1 = East Polynesian, 2 = West Polynesian, 3 = Caucasian, 4 = Other, 9 = Mixed East/West Polynesian
+#All 5 samples that are homozygouse minor (GG) for TRPB4 gene are West Polynesian.
+#Hets, 137 West Poly, 24 East Poly, 11 Mixed Poly, and 1 Caucasian.
+
+
+```
+
+```{r West Polynesian G, echo=FALSE, message=F, warning=FALSE, results='asis'}
+
+#creating the results data, col and row names
+resultstableWP <- (data.frame(matrix(nrow=length(snplistG), ncol=19)))
+names(resultstableWP) <- c("SNP", "n", "genotypes", "alleles", "Beta", "SE", "OR", "LowerCI", "UpperCI", "P", "n.adj", "genotypes.adj", "alleles.adj","Beta.adj","SE.adj", "OR.adj", "LowerCI.adj", "UpperCI.adj", "P.adj")
+resultstableWP[,1] <- snplistG
+
+#performing the logistical analysis, first on the unadjusted data and then adjusted data 
+for(snp in snplistG){  
+  resultstableWP[resultstableWP$SNP == snp,2:10]<-results(
+    test<-glm(as.numeric(GPGOUTAFFSTAT)~as.numeric(as.factor(westpoly[, snp])), family=binomial, data=westpoly),
+    genotypes<-table(na.omit(westpoly[, snp])),
+    s<-levels(factor(westpoly[, snp]))
+  )
+  resultstableWP[resultstableWP$SNP == snp,11:19]<-results(
+    test<-glm(as.numeric(GPGOUTAFFSTAT)~as.numeric(as.factor(westpoly[, snp]))+as.numeric(AGECOL)+as.factor(SEX)+PCA1+PCA2+PCA3+PCA4+PCA5+PCA6+PCA7+PCA8+PCA9+ PCA10+as.numeric(PCAETHBROAD_down), family=binomial, data=westpoly),
+    genotypes<-table(na.omit(westpoly[, snp])),
+    s<-levels(factor(westpoly[, snp]))
+  )
+}
+
+#editing the results table to show the actual alleles instead of 0, 1 and 2 
+resultstableWP[1,"alleles"]="GG/GA/AA"
+resultstableWP[2,"alleles"]="CC/CT/TT"
+#editing the results table to show Gene name and rs number 
+resultstableWP[1,"SNP"]= "LIPE (rs370955937)"
+resultstableWP[2,"SNP"]= "SLC22A3 (rs8187715)"
+
+#removing the genotypes.adj, alleles.adj and the down coding SNP colunm from the table
+resultstableWP$genotypes.adj <- NULL
+resultstableWP$alleles.adj <- NULL
+
+
+```
+
+```{r East Polynesian G, echo=FALSE, message=F, warning=FALSE, esacpe = FALSE, results='asis'}
+
+#creating the results data, col and row names
+resultstableEP <- (data.frame(matrix(nrow=length(snplistG), ncol=19)))
+names(resultstableEP) <- c("SNP", "n", "genotypes", "alleles", "Beta", "SE", "OR", "LowerCI", "UpperCI", "P", "n.adj", "genotypes.adj", "alleles.adj","Beta.adj","SE.adj", "OR.adj", "LowerCI.adj", "UpperCI.adj", "P.adj")
+resultstableEP[,1] <- snplistG
+
+#performing the logistical analysis, first on the unadjusted data and then adjusted data 
+for(snp in snplistG){  
+  resultstableEP[resultstableEP$SNP == snp,2:10]<-results(
+    test<-glm(as.numeric(GPGOUTAFFSTAT)~as.numeric(as.factor(eastpoly[, snp])), family=binomial, data=eastpoly),
+    genotypes<-table(na.omit(eastpoly[, snp])),
+    s<-levels(factor(eastpoly[, snp]))
+  )
+  resultstableEP[resultstableEP$SNP == snp,11:19]<-results(
+    test<-glm(as.numeric(GPGOUTAFFSTAT)~as.numeric(as.factor(eastpoly[, snp]))+as.numeric(AGECOL)+as.factor(SEX)+PCA1+PCA2+PCA3+PCA4+PCA5+PCA6+PCA7+PCA8+PCA9+ PCA10+as.numeric(PCAETHBROAD_down), family=binomial, data=eastpoly),
+    genotypes<-table(na.omit(eastpoly[, snp])),
+    s<-levels(factor(eastpoly[, snp]))
+  )
+}
+
+
+#editing the results table to show the actual alleles instead of 0, 1 and 2 
+resultstableEP[1,"alleles"]="GG/GA/AA"
+resultstableEP[2,"alleles"]="CC/CT/TT"
+#editing the results table to show Gene name and rs number 
+resultstableEP[1,"SNP"]= "LIPE (rs370955937)"
+resultstableEP[2,"SNP"]= "SLC22A3 (rs8187715)"
+
+#removing the genotypes.adj, alleles.adj and the down coding SNP colunm from the table
+resultstableEP$genotypes.adj <- NULL
+resultstableEP$alleles.adj <- NULL
+
+```
+
+```{r Admixed Polynesian G, echo=FALSE, message=F, warning=FALSE, esacpe = FALSE, results='asis'}
+
+#creating the results data, col and row names
+resultstablegADP <- (data.frame(matrix(nrow=length(snplistG), ncol=19)))
+names(resultstablegADP) <- c("SNP", "n", "genotypes", "alleles", "Beta", "SE", "OR", "LowerCI", "UpperCI", "P", "n.adj", "genotypes.adj", "alleles.adj","Beta.adj","SE.adj", "OR.adj", "LowerCI.adj", "UpperCI.adj", "P.adj")
+resultstablegADP[,1] <- snplistG
+
+#performing the logistical analysis, first on the unadjusted data and then adjusted data 
+for(snp in snplistG){  
+  resultstablegADP[resultstablegADP$SNP == snp,2:10]<-results(
+    test<-glm(as.numeric(GPGOUTAFFSTAT)~as.numeric(as.factor(adpoly[, snp])), family=binomial, data=adpoly),
+    genotypes<-table(na.omit(adpoly[, snp])),
+    s<-levels(factor(adpoly[, snp]))
+  )
+  resultstablegADP[resultstablegADP$SNP == snp,11:19]<-results(
+    test<-glm(as.numeric(GPGOUTAFFSTAT)~as.numeric(as.factor(adpoly[, snp]))+as.numeric(AGECOL)+as.factor(SEX)+PCA1+PCA2+PCA3+PCA4+PCA5+PCA6+PCA7+PCA8+PCA9+ PCA10+as.numeric(PCAETHBROAD_down), family=binomial, data=adpoly),
+    genotypes<-table(na.omit(adpoly[, snp])),
+    s<-levels(factor(adpoly[, snp]))
+  )
+}
+
+
+#editing the results table to show the actual alleles instead of 0, 1 and 2 
+resultstablegADP[1,"alleles"]="GG/GA/AA"
+resultstablegADP[2,"alleles"]="CC/CT/TT"
+#editing the results table to show Gene name and rs number 
+resultstablegADP[1,"SNP"]= "LIPE (rs370955937)"
+resultstablegADP[2,"SNP"]= "SLC22A3 (rs8187715)"
+
+#removing the genotypes.adj, alleles.adj and the down coding SNP colunm from the table
+resultstablegADP$genotypes.adj <- NULL
+resultstablegADP$alleles.adj <- NULL
+
+```
+
+```{r Ngati Porou Hauora G, echo=FALSE, message=F, warning=FALSE, esacpe = FALSE, results='asis'}
+
+#creating the results data, col and row names
+resultstable <- (data.frame(matrix(nrow=length(snplistG), ncol=19)))
+names(resultstable) <- c("SNP", "n", "genotypes", "alleles", "Beta", "SE", "OR", "LowerCI", "UpperCI", "P", "n.adj", "genotypes.adj", "alleles.adj","Beta.adj","SE.adj", "OR.adj", "LowerCI.adj", "UpperCI.adj", "P.adj")
+resultstable[,1] <- snplistG
+
+#performing the logistical analysis, first on the unadjusted data and then adjusted data 
+for(snp in snplistG){  
+  resultstable[resultstable$SNP == snp,2:10]<-results(
+    test<-glm(as.numeric(GOUTAFFSTAT)~as.numeric(as.factor(mydataNPH[, snp])), family=binomial, data=mydataNPH),
+    genotypes<-table(na.omit(mydataNPH[, snp])),
+    s<-levels(factor(mydataNPH[, snp]))
+  )
+  resultstable[resultstable$SNP == snp,11:19]<-results(
+    test<-glm(as.numeric(GOUTAFFSTAT)~as.numeric(as.factor(mydataNPH[, snp]))+as.numeric(AGECOL)+as.factor(SEX)+as.numeric(GPANCESTRY), family=binomial, data=mydataNPH),
+    genotypes<-table(na.omit(mydataNPH[, snp])),
+    s<-levels(factor(mydataNPH[, snp]))
+  )
+}
+
+#editing the results table to show the actual alleles instead of 0, 1 and 2 
+resultstable[1,"alleles"]="GG/GA/AA"
+resultstable[2,"alleles"]="CC/CT/TT"
+#editing the results table to show Gene name and rs number 
+resultstable[1,"SNP"]= "LIPE (rs370955937)"
+resultstable[2,"SNP"]= "SLC22A3 (rs8185517)"
+
+#removing the genotypes.adj, alleles.adj and the down coding SNP colunm from the table
+resultstable$genotypes.adj <- NULL
+resultstable$alleles.adj <- NULL
+
+```
+
+```{r res tab G, echo=FALSE, message=F, warning=FALSE, esacpe = FALSE, results='asis'}
+#combining results in nice table 
+
+gout <- rbind.data.frame(resultstablePW, resultstableWP, resultstableEP, resultstablegADP, resultstable)
+
+gout%>%
+  mutate_at(vars(starts_with("p.value")), funs(format_p)) %>% 
+  kable(., caption="Logistic regression of LIPE and SLC22A3 with Gout", format = "html", escape = F)%>%
+  kable_styling(bootstrap_options = c("striped", "hover"), full_width = F)%>%
+  add_header_above(c(" " = 4, "Unadjusted" = 6, "Adjusted" = 7)) %>% 
+  group_rows(index = c("Polynesian wide" = 2 , "West Polynesian" = 2 , "East Polynesian" = 2 , "Admixed Polynesian" = 2 , "Ngati Porou Hauora" = 2)) %>% 
+  column_spec(10, border_right = T) %>% 
+  footnote(general = "Covariates in the adjusted model are age, sex, PCs 1-10 and broad PCA ancestry.  Ngati Porou Hauora is adjusted with Grandparental ancestry rather than PCA's")
+
+```
+
+#Gout Meta-analysis 
+```{r, echo=FALSE, message=F, warning=FALSE, fig.width= 8}
+library(meta)
+
+#making table of beta and standard error scores 
+metascoresG <- as.data.frame((matrix(nrow = 5, ncol = 4)))
+names(metascoresG) <- c("WP", "EP","ADP", "NPH")
+row.names(metascoresG) <- c("LIPEb","SLC22A3b","LIPEse","SLC22A3se","Study")
+#adding in the scores from each gout association test, WP, EP and NPH 
+metascoresG[1:2,1] <- resultstableWP$Beta.adj
+metascoresG[1:2,2] <- resultstableEP$Beta.adj
+metascoresG[1:2,3] <- resultstablegADP$Beta.adj
+metascoresG[1:2,4] <- resultstable$Beta.adj
+metascoresG[3:4,1] <- resultstableWP$SE.adj
+metascoresG[3:4,2] <- resultstableEP$SE.adj
+metascoresG[3:4,3] <- resultstablegADP$SE.adj
+metascoresG[3:4,4] <- resultstable$SE.adj
+metascoresG[5,] <- c("WP", "EP","ADP", "NPH")
+#transposing the table
+metascoresG <- as.data.frame(t(metascoresG))
+metascoresG$LIPEb <-  as.numeric(levels(metascoresG$LIPEb))[metascoresG$LIPEb]
+metascoresG$LIPEse <-  as.numeric(levels(metascoresG$LIPEse))[metascoresG$LIPEse]
+
+metascoresG$SLC22A3b <-  as.numeric(levels(metascoresG$SLC22A3b))[metascoresG$SLC22A3b]
+metascoresG$SLC22A3se <-  as.numeric(levels(metascoresG$SLC22A3se))[metascoresG$SLC22A3se]
+
+```
+
+###LIPE
+```{r, echo=FALSE, message=F, warning=FALSE, fig.width= 8}
+#LIPE Gout meta analysis 
+metaLIPE <- metagen(TE = LIPEb, seTE = LIPEse, sm = "OR", studlab = Study, data = metascoresG)
+
+forest(metaLIPE, comb.random = FALSE, print.Q=TRUE,print.pval.Q=TRUE,print.tau2=FALSE,print.I2=FALSE,hetlab="Heterogeneity: ",xlab="Odds Ratio",digits=3,text.fixed="Overall (95% CI)",smlab="LIPE and gout meta analysis", test.overall = T, layout = "RevMan5")
+```
+
+###SLC22A3
+```{r, echo=FALSE, message=F, warning=FALSE, fig.width= 8}
+#SLC22A3 Gout meta analysis 
+metaSLC22A3 <- metagen(TE = SLC22A3b, seTE = SLC22A3se, sm = "OR", studlab = Study, data = metascoresG)
+
+forest(metaSLC22A3, comb.random = FALSE, print.Q=TRUE,print.pval.Q=TRUE,print.tau2=FALSE,print.I2=FALSE,hetlab="Heterogeneity: ", xlab="Odds Ratio",digits=3,text.fixed="Overall (95% CI)",smlab="SLC22A3 and gout meta analysis", test.overall = T, layout = "RevMan5")
+
+```
+
+```{r interaction, echo=FALSE, message=F, warning=FALSE, esacpe = FALSE, results='asis'}
+
+interlist <- c("RS")
+
+#creating the results data, col and row names
+inter_restab <- (data.frame(matrix(nrow=1, ncol=19)))
+names(inter_restab) <- c("SNP", "n", "genotypes", "alleles", "Beta", "SE", "OR", "LowerCI", "UpperCI", "P", "n.adj", "genotypes.adj", "alleles.adj","Beta.adj","SE.adj", "OR.adj", "LowerCI.adj", "UpperCI.adj", "P.adj")
+inter_restab[,1] <- "CREB3L2/CREBRF"
+
+inter_WPtest = glm(as.numeric(as.character(GPGOUTAFFSTAT)) ~  RS777894272_down*RS373863828_down, data=westpoly, family=binomial)
+inter_WPtestADJ = glm(as.numeric(as.character(GPGOUTAFFSTAT)) ~  RS777894272_down*RS373863828_down+as.numeric(AGECOL)+as.factor(SEX)+PCA1+PCA2+PCA3+PCA4+PCA5+PCA6+PCA7+PCA8+PCA9+ PCA10+as.numeric(PCAETHBROAD_down), data=westpoly, family=binomial)
+summary(inter_WPtest)
+summary(inter_WPtestADJ)
+
+inter_EPtest = glm(as.numeric(as.character(GPGOUTAFFSTAT)) ~  RS777894272_down*RS373863828_down, data=eastpoly, family=binomial)
+inter_EPtestADJ = glm(as.numeric(as.character(GPGOUTAFFSTAT)) ~  RS777894272_down*RS373863828_down+as.numeric(AGECOL)+as.factor(SEX)+PCA1+PCA2+PCA3+PCA4+PCA5+PCA6+PCA7+PCA8+PCA9+ PCA10+as.numeric(PCAETHBROAD_down), data=eastpoly, family=binomial)
+summary(inter_EPtest)
+summary(inter_EPtestADJ)
+
+inter_ADPtest = glm(as.numeric(as.character(GPGOUTAFFSTAT)) ~  RS777894272_down*RS373863828_down, data=adpoly, family=binomial)
+inter_ADPtestADJ = glm(as.numeric(as.character(GPGOUTAFFSTAT)) ~  RS777894272_down*RS373863828_down+as.numeric(AGECOL)+as.factor(SEX)+PCA1+PCA2+PCA3+PCA4+PCA5+PCA6+PCA7+PCA8+PCA9+ PCA10+as.numeric(PCAETHBROAD_down), data=adpoly, family=binomial)
+summary(inter_ADPtest)
+summary(inter_ADPtestADJ)
+
+inter_NPHtest = glm(as.numeric(as.character(GOUTAFFSTAT)) ~  RS777894272_down*RS373863828_down, data=mydataNPH, family=binomial)
+inter_NPHtestADJ = glm(as.numeric(as.character(GOUTAFFSTAT)) ~  RS777894272_down*RS373863828_down+as.numeric(AGECOL)+as.factor(SEX)+as.numeric(GPANCESTRY), data=mydataNPH, family=binomial)
+summary(inter_NPHtest)
+summary(inter_NPHtestADJ)
+
+```
+
+
+
