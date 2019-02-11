@@ -6,4 +6,8 @@ Today was officially my first day back.  I attened the Research Bazaar day one s
 * Using patterns to find and edit files: grp/sed/awk 
 * R intro and data manipulation recap 
 
+# 12th Tuesday February 
+Second day at ResBaz.  Attended the following sessions:
+* 1st Key note speaker: Librarian 
+
 
