@@ -9,5 +9,7 @@ Today was officially my first day back.  I attened the Research Bazaar day one s
 # 12th Tuesday February 
 Second day at ResBaz.  Attended the following sessions:
 * 1st Key note speaker: Librarian 
+* Version control for RStudio and Github 
+* learning functions in R
 
 
