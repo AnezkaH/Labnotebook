@@ -12,4 +12,9 @@ Second day at ResBaz.  Attended the following sessions:
 * Version control for RStudio and Github 
 * learning functions in R
 
+# 13 Wednesday February 
+Last day at ResBaz.  Attended the following sessions:
+* Key note speaker: Some challengers of early career research 
+* Data visualisation in R 
+* Making packages in R 
 
