@@ -1,5 +1,13 @@
 This file contains daily entries for February 2019 
 
+# 15th Friday February 
+Supervisor hui #1 10am, Tony and Phil present.  Agenda included review of 2018, overview of analyses to be completed in 2019,
+timeline for analyses and writing.  
+
+Attended postgraduate writing day with Pete at the staff club. 
+* organised hui with Jaye and Megan to discuss LIPE, wrote hui agenda
+* read papers realting to genome wide estimations 
+
 # 14th Thursday February 
 Attended the Postgraduate writing day with Pete at the staff club 
 * wrote agenda for supervisor meeting tomorrow 
