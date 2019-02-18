@@ -1,5 +1,11 @@
 This file contains daily entries for February 2019 
 
+# 19th Tuesday February 
+
+* Genome wide estimation (GWE) hui with Phil, Tony, Michael, Matt and myself 
+* Lab meeting 
+* Reading book about GCTA method for GWE 
+
 # 18th Monday February 
 
 * Attended Kiwi host induction 
