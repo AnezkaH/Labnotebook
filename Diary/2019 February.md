@@ -1,5 +1,12 @@
 This file contains daily entries for February 2019 
 
+# 18th Monday February 
+
+* Attended Kiwi host induction 
+* Read papers related to genome wide estimation methods 
+* Meeting for Postgrad symposium 
+* Worked on scholarship application 
+
 # 15th Friday February 
 Supervisor hui #1 10am, Tony and Phil present.  Agenda included review of 2018, overview of analyses to be completed in 2019,
 timeline for analyses and writing.  
