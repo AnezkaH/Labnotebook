@@ -13,6 +13,16 @@
 
 [Link to paper](https://www.nature.com/articles/nrg3457)
 
+## Genome-Wide Complex Trait Analysis (GCTA): Methods, Data Analyses, and Interpretations
+
+[Link to paper](https://link.springer.com/protocol/10.1007/978-1-62703-447-0_9)
+
+This paper was publihed in 2013 from authors in Australia.  This paper details one of the methods that Matt has been using in his GWE pipelines.  I want to read this paper, understand the rational for creating this method, and learn how to use it.  
+
+Purpose = to estimate the proportion of additive genetic variance that can be captured by considering all the SNPs simultaneously (with out testing for any individual associations of the SNPs with the trait) 
+
+Missing heritability can also be called hiding heritability, because most SNP effets are too small to be pick up by the strigent GWAS significance levels.  
+
 ## Harnessing genomic information for livestock improvement 
 
 [Link to paper](https://www.nature.com/articles/s41576-018-0082-2) 
