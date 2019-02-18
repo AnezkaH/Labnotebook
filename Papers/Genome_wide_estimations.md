@@ -1,6 +1,18 @@
 
 # Genome wide estimations 
 
+## Common SNPs explain a large proportion of the heritability for human height
+
+[Link to paper](https://www.nature.com/articles/ng.608)
+
+## Quantifying Missing Heritability at Known GWAS Loci
+
+[Link to paper](https://journals.plos.org/plosgenetics/article?id=10.1371/journal.pgen.1003993)
+
+## Pitfalls of predicting complex traits from SNPs
+
+[Link to paper](https://www.nature.com/articles/nrg3457)
+
 ## Harnessing genomic information for livestock improvement 
 
 [Link to paper](https://www.nature.com/articles/s41576-018-0082-2) 
