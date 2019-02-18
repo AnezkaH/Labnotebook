@@ -1,6 +1,20 @@
 
 # Genome wide estimations 
 
+## Harnessing genomic information for livestock improvement 
+
+[Link to paper](https://www.nature.com/articles/s41576-018-0082-2) 
+
+18/02/19 
+
+This paper was publised in Natures reviews in December 2018.  The information that I am interested in from this paper, is how genome wide estimation studies and 'breeding values' or risk anaylses can be useful and how they are done.  The paper also has good definitions for QTL, GWAS and genomic selection.  
+* Genetic variance for the trait of interest = additive effects of thousands of variants with very small effects that are uniformly distributed in the genome.  
+* In humans this method is used to study the genetic architecture of common complex diseases and predict individuas disease risk 
+* BLUP and GBLUP assume that all segements of the genome contribute equaly to the trait of interest (we know that this is not true), this can mean that some SNP effects are regressed down, because it tis being assumed that all effects are small 
+
+In Box 2 there is an explaination and breakdown of LUP and GBLUP equations.  GBLUP estimations are more accurate when the populations are nigger and more closely related.  For the NPH data set, this means that accuracy is decreased due to the small size but increased because the coancestry measures are likely higher. 
+
+
 ## How to know when physicians are ready for genomic medicine
 
 [Link to the paper](http://stm.sciencemag.org/content/7/287/287fs19.short) 
