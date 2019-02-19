@@ -13,6 +13,8 @@
 
 [Link to paper](https://www.nature.com/articles/nrg3457)
 
+19 and 20/02/19 
+
 Paper was published in 2013, on Nature Genetics.  I want to understand the pitfalls associated with this method.  
 
 The major findings from the paper were 
@@ -47,6 +49,8 @@ Pitfalls of the analysis
 ## Genome-Wide Complex Trait Analysis (GCTA): Methods, Data Analyses, and Interpretations
 
 [Link to paper](https://link.springer.com/protocol/10.1007/978-1-62703-447-0_9)
+
+20/02/19 
 
 This paper was publihed in 2013 from authors in Australia.  This paper details one of the methods that Matt has been using in his GWE pipelines.  I want to read this paper, understand the rational for creating this method, and learn how to use it.  
 
