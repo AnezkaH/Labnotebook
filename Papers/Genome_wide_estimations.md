@@ -23,6 +23,14 @@ Purpose = to estimate the proportion of additive genetic variance that can be ca
 
 Missing heritability can also be called hiding heritability, because most SNP effets are too small to be pick up by the strigent GWAS significance levels.  
 
+SNPs are set as random effects in a mixed linear model.  
+
+This method is not necessarily meant for calculating SNP heritability.  The h2SNP value that is calculated is described as phenotypic variance explained by fitting all the genome-wide SNPs simultaneously.  (not as the proportion of phenotypic varaince explained by the additive effects of all causal variants).  Unless the method was used on a closely related cohort, then the h2SNP would be similar to the h2 of the trait.  Therefore the h2SNP in a family study can not be described as, varaince explained by all SNPs, because there is a shared environment effect and causal variant effects not tagged by the SNPs.  
+
+There are two steps 
+1. Generating the GRM between individuals 
+2. Estiamte variance explained by SNPs via REML
+
 ## Harnessing genomic information for livestock improvement 
 
 [Link to paper](https://www.nature.com/articles/s41576-018-0082-2) 
