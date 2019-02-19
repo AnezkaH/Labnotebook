@@ -13,6 +13,11 @@
 
 [Link to paper](https://www.nature.com/articles/nrg3457)
 
+Paper was published in 2013, on Nature Genetics.  I want to understand the pitfall associated with this method.  
+
+The major findings from the paper were 
+* many issues occur in the validation stage when the 
+
 ## Genome-Wide Complex Trait Analysis (GCTA): Methods, Data Analyses, and Interpretations
 
 [Link to paper](https://link.springer.com/protocol/10.1007/978-1-62703-447-0_9)
