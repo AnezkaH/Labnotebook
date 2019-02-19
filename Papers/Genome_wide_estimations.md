@@ -13,10 +13,36 @@
 
 [Link to paper](https://www.nature.com/articles/nrg3457)
 
-Paper was published in 2013, on Nature Genetics.  I want to understand the pitfall associated with this method.  
+Paper was published in 2013, on Nature Genetics.  I want to understand the pitfalls associated with this method.  
 
 The major findings from the paper were 
-* many issues occur in the validation stage when the 
+* many issues occur in the validation stage when it is not independent from the discovery phase 
+* make sure that the discovery and validation samples are BOTH representative of the population (while this is true, you must also make sure that the validation strategy is practically appropriate)
+* genomic prediction is already heavily used in livestock improvement and there are many potential aplications in plants, preventative medicine and clincal decisions 
+* genomic predictors need to be fairly evaluated and not over stated 
+
+Figure 1 in the paper is a really nice summary of how SNP-prediction is used, broken down in discovery, validation and application stages.  
+
+Limitation of prediction analyses 
+1. **Prediction of phenotypes from genetic markers**
+* assuming that heritability h2 is a true reflection of reality, only achiveable if all the causal variants are known and their effect sizes calucated without error 
+* environmental risk factors can be incorporated into the risk prediction to increase accuracy, however not all envr factors are known 
+* maybe more applicable at a group level rather than an individual level 
+2. **Variance explained by markers**
+* SNPs used in chip are not usually causal, can be mitigated by imputing based on LD (however this will not pick up on rare or population specific variants 
+* again mentions hidden heritability rather than missing 
+3. **Errors in the estimated effects of the markers**
+* effects are calculated from a finite sample meaning there will be sampling error 
+* generally the effect sizes of alleles are small, therefore so are the accuracies, unless using a large sample 
+4. **Statistical methods in the discovery sample**
+* least squares predicition is common, but calcualtes the SNP effects one at a time
+*  ideally, models the distribution of SNP effects and the correltaion between SNPs in the presence single and multiple causal varaints 
+
+Pitfalls of the analysis 
+1. Validation and discovery sample overlap 
+2. The validation sample: if the validation sample is more closely related to the discovery sample that the targeted population the prediction accuracy will be overestimated = cryptic relatedness 
+3. Population stratification similarity - this pitfall depends on the purpose of the analysis and the target population, (in NPH case this should not be an issue but we should be aware of it). The suggested solution to this to fit the ancestry PCA. 
+4. Expectation of equality of R2 and h2M 
 
 ## Genome-Wide Complex Trait Analysis (GCTA): Methods, Data Analyses, and Interpretations
 
