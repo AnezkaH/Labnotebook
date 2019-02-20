@@ -1,5 +1,11 @@
 This file contains daily entries for February 2019 
 
+# 20th Wednesday February 
+
+* reading paper limitations and pitfalls of GWE 
+* scholarship application 
+* looking at feedback of reviewers for report 
+
 # 19th Tuesday February 
 
 * Genome wide estimation (GWE) hui with Phil, Tony, Michael, Matt and myself 
