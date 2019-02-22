@@ -1,5 +1,15 @@
 This file contains daily entries for February 2019 
 
+# 22nd Friday 
+
+* LIPE hui and planning with Jaye 
+* schoalrship business 
+
+# 21st Thursday February 
+
+* mostly worked on thesis structure and setting up chapters 
+* zoom call with Waharoa ki te Toi 
+
 # 20th Wednesday February 
 
 * reading paper limitations and pitfalls of GWE 
