@@ -1,5 +1,11 @@
 This file contains daily entries for February 2019 
 
+# 25th Monday 
+
+* structuring thesis folder set up and LIPE paper 
+* reading paper for lab meeting 
+* planning for pharmacogenetics study 
+
 # 22nd Friday 
 
 * LIPE hui and planning with Jaye 
