@@ -9,6 +9,22 @@
 
 [Link to paper](https://journals.plos.org/plosgenetics/article?id=10.1371/journal.pgen.1003993)
 
+## LDAK 
+
+27/02/19 
+
+Doug Speed is the creator of this tool.  The inital purpose of the paper was "to adjust for linkage disequilibrium (LD) by calculating SNP weightings which downweight the contribution of SNPs in highly tagged regions".  The offical LDAK website is [here](http://dougspeed.com/ldak/). 
+
+Generally LDAK allows you to:
+* Calculates LDAK SNP weightings (now much quicker than before)
+* Computes weighted and unweighted kinship matrices 
+* Generalised REML Solver - allows for both kinships and regions
+* Super-efficient mixed-model analysis
+* Gene-based Association Testing
+* MultiBLUP Prediction 
+
+Relavent papers are about [MultiBLUP](https://www.nature.com/articles/s41588-018-0279-5) and [SumHer](https://www.nature.com/articles/s41588-018-0279-5) (method in LDAK that allows you to use summary level statistics instead of individual level data).  
+
 ## Pitfalls of predicting complex traits from SNPs
 
 [Link to paper](https://www.nature.com/articles/nrg3457)
