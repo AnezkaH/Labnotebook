@@ -1,5 +1,11 @@
 This file contains daily entries for February 2019 
 
+# 27th Wednesday 
+
+* BC SNPmax search for available data for pharma analysis 
+* lit search for LDAK and Bayes R 
+* scholarship and Tatai oranga organisation 
+
 # 26th Tuesday 
 
 * Presented paper at lab meeting 
