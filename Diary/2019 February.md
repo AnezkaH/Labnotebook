@@ -1,5 +1,12 @@
 This file contains daily entries for February 2019 
 
+# 26th Tuesday 
+
+* Presented paper at lab meeting 
+* Organising flights and accomidation to Tatai oranga 
+* Discussing LIPE with Megan briefly 
+* Cool new websites to look at for functional analysis of LIPE, [GeneMania](https://genemania.org/) and [Open Targets Platform](https://www.targetvalidation.org/target/ENSG00000079435).  
+
 # 25th Monday 
 
 * structuring thesis folder set up and LIPE paper 
@@ -9,7 +16,7 @@ This file contains daily entries for February 2019
 # 22nd Friday 
 
 * LIPE hui and planning with Jaye 
-* schoalrship business 
+* scholarship business 
 
 # 21st Thursday February 
 
