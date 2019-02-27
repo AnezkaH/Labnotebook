@@ -5,6 +5,8 @@ This file contains daily entries for February 2019
 * BC SNPmax search for available data for pharma analysis 
 * lit search for LDAK and Bayes R 
 * scholarship and Tatai oranga organisation 
+* general gene searches for 5 CGA genes 
+* read paper on SLC22A3 gene and metformin response 
 
 # 26th Tuesday 
 
