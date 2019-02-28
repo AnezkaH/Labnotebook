@@ -1,5 +1,12 @@
 This file contains daily entries for February 2019 
 
+# 28th Thursday 
+
+* meeting with Megan and Jaye about functional LIPE analysis 
+* preparing supervisor meeting 
+* scholarship documents 
+* R-Markdown for LIPE analysis 
+
 # 27th Wednesday 
 
 * BC SNPmax search for available data for pharma analysis 
