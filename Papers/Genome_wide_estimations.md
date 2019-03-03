@@ -93,7 +93,7 @@ This paper was publised in Natures reviews in December 2018.  The information th
 * In humans this method is used to study the genetic architecture of common complex diseases and predict individuas disease risk 
 * BLUP and GBLUP assume that all segements of the genome contribute equaly to the trait of interest (we know that this is not true), this can mean that some SNP effects are regressed down, because it tis being assumed that all effects are small 
 
-In Box 2 there is an explaination and breakdown of LUP and GBLUP equations.  GBLUP estimations are more accurate when the populations are nigger and more closely related.  For the NPH data set, this means that accuracy is decreased due to the small size but increased because the coancestry measures are likely higher. 
+In Box 2 there is an explaination and breakdown of BLUP and GBLUP equations.  GBLUP estimations are more accurate when the populations are bigger and more closely related.  For the NPH data set, this means that accuracy is decreased due to the small size but increased because the coancestry measures are likely higher. 
 
 
 ## How to know when physicians are ready for genomic medicine
