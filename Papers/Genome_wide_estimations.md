@@ -9,6 +9,16 @@
 
 [Link to paper](https://journals.plos.org/plosgenetics/article?id=10.1371/journal.pgen.1003993)
 
+12/03/19 
+
+This paper investigates the use of GWE methods to calculate heritability compared to GWAS type methods.  I want to understand the method that this paper used, and if their methods were reliable for detecting the effects of small effect variants (this is relavent for the NPH dataset).  
+
+* paper introduces the idea of genetic architecture affecting the effect size estimations of disease causing variants 
+* they defined local heritability to be the measure of aggregate variance from all causal variants at a locus
+* they used variance components analysis from a single effect size over a relatedness matrix 
+* this method allows the analysis of loci that have no known association in the trait but have been associated with other related traits, implicating shared disease architecture
+
+
 ## LDAK 
 
 27/02/19 
