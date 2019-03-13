@@ -1,4 +1,8 @@
  
+ #13th Wednesday 
+ 
+ Tidying up R-Markdowns and reading paper on GWE. 
+  
  #12th Tuesday 
  
  Organising scholarship payments with Uni. 
