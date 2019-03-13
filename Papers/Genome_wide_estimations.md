@@ -5,6 +5,27 @@
 
 [Link to paper](https://www.nature.com/articles/ng.608)
 
+13/03/19 
+
+The aim of this paper was to understand where the missing heritability is coming from.  Overall they were able to explain 45% of the heritability using all the SNP simultaneously.  The missing heritability can be explained by: 
+* incomplete LD between causal variants and the SNPs genotyped 
+* minor allele frequencies of the causal variants is low 
+
+Height is a model quantitative trait studied to investigate the genetic contribution to traits.  GWAS studies have identified ~50 variants in the general population that account for only ~5% of the heritability.  The final paragraph in the introduction has a very good explaination of the difference between GWAS and GWE.  
+
+GWAS = testing the SNPs individually for an association with the trait --> must use a very stringent P-value to account for the multiple testing (prevent false positives) --> means you miss out on significant small effects 
+
+GWE = testing all available SNPs at the same time for association with the trait, the effect sizes are treated as random by the model.
+
+**Results**
+3,925 individuals were retained after accounting for pairwise relationships (maximum of 0.025).  They fitted a linear model and then used REML to estimate the variance explained by the SNPs.  The 45% is still less than the 80% previously estmated, this is because the SNPs on the chip are not in full LD with all the causal variants.  
+
+They performed REML analysis by fitting the first two, four and ten eigenvectors from the European-only PCA as covariates.
+
+Other things to consider: 
+* gene by environment interactions (but shouldn't contribute to heritability) 
+* epigenetic effects if they are inherited stabily 
+
 ## Quantifying Missing Heritability at Known GWAS Loci
 
 [Link to paper](https://journals.plos.org/plosgenetics/article?id=10.1371/journal.pgen.1003993)
@@ -17,6 +38,8 @@ This paper investigates the use of GWE methods to calculate heritability compare
 * they defined local heritability to be the measure of aggregate variance from all causal variants at a locus
 * they used variance components analysis from a single effect size over a relatedness matrix 
 * this method allows the analysis of loci that have no known association in the trait but have been associated with other related traits, implicating shared disease architecture
+
+The papers aim is to explain as much of the local heritability as possible without upward bias.
 
 
 ## LDAK 
