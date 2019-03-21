@@ -1,11 +1,19 @@
  
+ # 21st Thursday 
+ 
+ Pharma analysis R-Markdown tidy up.  Christchurch Vigil.  Getting files off Jaye for LIPE analysis. 
+ 
+ # 20th Wednesday 
+ 
+ Pharma analysis set up.  Science Wananga meeting. 
+ 
  # 19th Tuesday 
  
  Biochemistry department review lunch.  
  
  # 18th Monday 
  
- 
+ LIPE analysis R-Markdown tidy up.  Met with Phil to discuss NPH database set up for GWE.  
  
  # 15th Friday  
  
