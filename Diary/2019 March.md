@@ -1,4 +1,8 @@
  
+ # 22nd Friday 
+ 
+ Attended the Genetics Otago Advisory Board meeting.  Started the LIPE Nation specific analysis.  
+ 
  # 21st Thursday 
  
  Pharma analysis R-Markdown tidy up.  Christchurch Vigil.  Getting files off Jaye for LIPE analysis. 
