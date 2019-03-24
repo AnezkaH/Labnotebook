@@ -1,4 +1,13 @@
  
+ # 23rd Monday 
+ 
+Extracted the table of ethinicty information from R to look at the 'NAs' (used the 'write.table' function, make sure you use the sep= "\t' arguement to make the columns tab seperated and able to open in Excel).  There are a number of participants who do not have an assigned ETH_SPECIFIC_Code. I am going through manually and assigning them to 1 of the 7 groups, and leaving the European/Caucasian particiapnts as 'NA'.  
+ 
+ Example:  
+ 
+ SUBJECT GPANCESTRY 0.35 Maori and 0.65 European = NZ Maori. 
+ SUBJECT GPANCESTRY 0.25 Maori , 0.5 Samoan, 0.25 European = Mixed 
+ 
  # 22nd Friday 
  
  Attended the Genetics Otago Advisory Board meeting.  Started the LIPE Nation specific analysis.  
