@@ -8,6 +8,8 @@ Extracted the table of ethinicty information from R to look at the 'NAs' (used t
  SUBJECT GPANCESTRY 0.35 Maori and 0.65 European = NZ Maori. 
  SUBJECT GPANCESTRY 0.25 Maori , 0.5 Samoan, 0.25 European = Mixed 
  
+ Of the 5395 particiapants with NA in the ETH_SPECIFIC_Code column I manually changed 485 participants.  
+ 
  # 22nd Friday 
  
  Attended the Genetics Otago Advisory Board meeting.  Started the LIPE Nation specific analysis.  
