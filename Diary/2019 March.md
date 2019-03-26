@@ -1,4 +1,12 @@
  
+ # 25 Wednesday 
+ 
+ Test extractions of CoreExome data from BCSNPmax to understand why so many markers were left out of the NPH export.  Also did analysis and tidy up of LIPE R-Markdown.  Searching Poly wide data for more Metformin response data to include in the SLC22A3 analysis. 
+ 
+ # 24th Tuesday 
+ 
+ Extracted the NPH TaqMan data from BCSNPmax.  Genotypes and Pehnotypes in seperate files.  Extracted the CoreExome data in PLINK format (more compressed).  Data on server. 
+ 
  # 23rd Monday 
  
 Extracted the table of ethinicty information from R to look at the 'NAs' (used the 'write.table' function, make sure you use the sep= "\t' arguement to make the columns tab seperated and able to open in Excel).  There are a number of participants who do not have an assigned ETH_SPECIFIC_Code. I am going through manually and assigning them to 1 of the 7 groups, and leaving the European/Caucasian particiapnts as 'NA'.  
