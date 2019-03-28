@@ -2,7 +2,12 @@
  
  Reviewing CoreEx extraction.  LIPE analysis touch up.  
  
- Thinking about committee members.  
+The paticipants of non-European ancestry that were collected from in the NPH study are as follows :
+
+CNP025, CNP076, CNP080, CNP088 (Tongan, European), CNP105, CNP123, CNP132 (Indian), CNP142, CNP148 (Niuean), CNP149, CNP185, NPH024, NPH041 (Fijian), NPH106, NPH139, NPH143 (Tahitian, European), NPH153, NPH164, NPH201, NPH207 (CI Maori, Tahitian, European).
+All are European unless sepcified.  
+ 
+Thinking about committee members.  
  
  # 25 Wednesday 
  
