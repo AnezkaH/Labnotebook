@@ -1,7 +1,12 @@
+ # 26 Thursday 
+ 
+ Reviewing CoreEx extraction.  LIPE analysis touch up.  
+ 
+ Thinking about committee members.  
  
  # 25 Wednesday 
  
- Test extractions of CoreExome data from BCSNPmax to understand why so many markers were left out of the NPH export.  Also did analysis and tidy up of LIPE R-Markdown.  Searching Poly wide data for more Metformin response data to include in the SLC22A3 analysis. 
+ Test extractions of CoreExome data from BCSNPmax to understand why so many markers were left out of the NPH export.  Searching Poly wide data for more Metformin response data to include in the SLC22A3 analysis. Spoke with Tanya about the missing alleles from the Core Exome extract and it turns out that there were a large number of Czech individuals who were sequenced on a completely different array.  This means there are 500,000+ alleles that will not have data for NPH.  Tanya gave me access to a batch 1 specific file that only has the subjects and marers for NPH.  There are 292 in the NPH specific file.  312 on the full file.  This is because there are ~20 people who were recruited with NPH but are not actually Maori.  We only want those who are Maori for this analysis. 
  
  # 24th Tuesday 
  
