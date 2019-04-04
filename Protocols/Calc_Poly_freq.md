@@ -14,31 +14,27 @@ You need to know the following:
 1. Overlap (this is optional, use 0 for no overlap)  
 
 -----------------
-#test script
+**This is an example of what you will enter into the command line**  
+#bash polyfreq.sh ALMS1 2 73612885 73837046 0  
 
-**This is an example of what you will enter into the command line**
-#bash polyfreq.sh ALMS1 2 73612885 73837046 0
+#ALMS1  2 73612885 73837046 50000    
+#gene=ALMS1  
+#chr=2  
+#start=73612885  
+#end=73837046  
+#overlap=50000  
 
-#https://angus.readthedocs.io/en/2016/pop_gen_tutorial.html
-#ALMS1  2       73612885        73837046 50000
-#gene=ALMS1
-#chr=2
-#start=73612885
-#end=73837046
-#overlap=50000
+overlap=$5  
+gene=$1  
+chr=$2  
+start=$(($3 - $5))  
+end=$(($4 + $5))  
 
-overlap=$5
-gene=$1
-chr=$2
-start=$(($3 - $5))
-end=$(($4 + $5))
+bcftools filter ../../Matt/aseq/variant_annotated/Chr$chr.ann_all.vcf.gz  -r $chr:$start-$end -o tmp.vcf.gz -O z  
 
+bcftools view -S ../../Matt/aseq/keeppoly.txt tmp.vcf.gz | bcftools view -q 0.0001 --min-alleles 2 --max-alleles 2 | gzip -c > $gene.vcf.gz  
 
-bcftools filter ../../Matt/aseq/variant_annotated/Chr$chr.ann_all.vcf.gz  -r $chr:$start-$end -o tmp.vcf.gz -O z
-
-bcftools view -S ../../Matt/aseq/keeppoly.txt tmp.vcf.gz | bcftools view -q 0.0001 --min-alleles 2 --max-alleles 2 | gzip -c > $gene.vcf.gz
-
-vcftools --gzvcf $gene.vcf.gz --freq --out $gene
-
+vcftools --gzvcf $gene.vcf.gz --freq --out $gene  
+  
 rm tmp.vcf.gz
 ----------------------
