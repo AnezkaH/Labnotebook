@@ -3,8 +3,8 @@
 
 Worked with Megan and Matt to calcualte LD and Poly freq of LIPE rs370955937.  
 
-Here is the protocol for [calcualting LD](/Protocol/Calc_Poly_LD.md).  
-Here is the protocol for [calculating allele frequencies](/Protocol/Calc_Poly_freq.md).  
+Here is the protocol for [calcualting LD](../../Protocol/Calc_Poly_LD.md).  
+Here is the protocol for [calculating allele frequencies](../../Protocol/Calc_Poly_freq.md).  
 
 # 3rd Wednesday 
 
