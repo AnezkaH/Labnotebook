@@ -1,4 +1,4 @@
-# Calculating Linkage Diseqilibrium between variants 
+# Calculating Linkage Diseqilibrium between variants in Polynesian genomes
 
 This protocol is done in bash.
 
