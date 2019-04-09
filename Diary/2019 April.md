@@ -1,4 +1,12 @@
 
+# 9th Tuesday 
+
+Looked on the [this genome browser](https://bioinf.eva.mpg.de/jbrowse/?loc=19%3A42909572..42909663&tracks=hg19_1000g%2CDenisova%2CAltai%2CSS6004477%2CSS6004478%2CSS6004472&highlight=) for the variants rs169xxxx and rs104xxxx in the Denisovan genome.  
+
+# 5th Friday 
+
+Supervisor meeting 
+
 # 4th Thursday
 
 Worked with Megan and Matt to calcualte LD and Poly freq of LIPE rs370955937.  
