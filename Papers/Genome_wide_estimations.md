@@ -3,7 +3,7 @@
 
 ## Linkage disequilibrium in finite populations
 
-[Link to paper](Linkage disequilibrium in finite populations) 
+[Link to paper](https://www.ncbi.nlm.nih.gov/pubmed/24442307/) 
 
 ## Gametic disequilibrium measures: proceed with caution
 
