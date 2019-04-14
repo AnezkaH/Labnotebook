@@ -1,6 +1,22 @@
 
 # Genome wide estimations 
 
+## Linkage disequilibrium in finite populations
+
+[Link to paper](Linkage disequilibrium in finite populations) 
+
+## Gametic disequilibrium measures: proceed with caution
+
+[Link to paper](https://www.ncbi.nlm.nih.gov/pubmed/3666445/)
+
+This paper compares 5 measures of LD and their properties.  
+
+## Mathematical properties of the r2 measure of linkage disequilibrium
+
+[Link to paper](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC2580747/) 
+
+This paper investigates the mathematical properties of r2.  
+
 ## Common SNPs explain a large proportion of the heritability for human height
 
 [Link to paper](https://www.nature.com/articles/ng.608)
