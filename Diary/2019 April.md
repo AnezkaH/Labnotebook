@@ -1,3 +1,10 @@
+# 12th Friday 
+
+Maori postgrad writing day. LIPE healthy group analysis, BMI and waist.  Submited the BMS postgrad symposium oral abstract.
+
+# 11th Thursday 
+
+Maori postgrad writing day and the Fulbright lunch meeting. 
 
 # 10th Wednesday 
 
