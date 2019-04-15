@@ -1,3 +1,7 @@
+# 15th Monday 
+
+Asked Tanya for help with opening, viewing and searching the VCF Denisovan genome file.  Ended up making a script.  Also worked on the SLC22A3 metformin response analysis in the gout and DM subjects.  Worked on the LIPE LD write up, specifically understanding the different types of LD measures.  
+
 # 12th Friday 
 
 Maori postgrad writing day. LIPE healthy group analysis, BMI and waist.  Submited the BMS postgrad symposium oral abstract.
