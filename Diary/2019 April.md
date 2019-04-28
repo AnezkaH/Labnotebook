@@ -1,3 +1,7 @@
+# 29th Monday 
+
+Used the polyfreq.script file in the comand line to make a Polynesian allele frequency file on the server.  This file now contains all the allele frequencies for the variants that are in high LD with the rs3709 variant.  
+
 # 15th Monday 
 
 Asked Tanya for help with opening, viewing and searching the VCF Denisovan genome file.  Ended up making a script.  Also worked on the SLC22A3 metformin response analysis in the gout and DM subjects.  Worked on the LIPE LD write up, specifically understanding the different types of LD measures.  
